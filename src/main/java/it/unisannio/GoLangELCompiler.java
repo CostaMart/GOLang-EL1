@@ -4,6 +4,7 @@ package it.unisannio;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+
 import generated.GoLexer;
 import generated.GoParser;
 import org.antlr.v4.runtime.CharStream;
@@ -15,6 +16,7 @@ import org.apache.commons.cli.*;
 import java.io.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import util.SymbolTableFactory;
 
 public class GoLangELCompiler {
     static final Logger logger = LogManager.getLogger("main");
@@ -26,6 +28,7 @@ public class GoLangELCompiler {
             // setup command line intepreter
             Options options = new Options();
             options.addOption("o", "outputDir", true, "Directory containing output files");
+            options.addOption("s", "symbol", false, "prints symbol table values");
             CommandLineParser cmdParser = new DefaultParser();
             CommandLine cmds = cmdParser.parse(options, args);
 
@@ -57,7 +60,12 @@ public class GoLangELCompiler {
                 if(cmds.hasOption("-o")) dir = cmds.getOptionValue("-o");
                 else dir = System.getProperty("user.dir");
 
+                logger.debug(dir.toString());
                 compileGo(rewriter.getText(), fileName, dir);
+
+                if(cmds.hasOption("s")){
+                    SymbolTableFactory.getInstance().printTable();
+                }
 
             }
 

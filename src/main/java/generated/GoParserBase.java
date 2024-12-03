@@ -1,7 +1,8 @@
 package generated;
 
-import java.util.List;
 import org.antlr.v4.runtime.*;
+import util.SymbolTable;
+import util.SymbolTableFactory;
 
 /**
  * All parser methods that used in grammar (p, prev, notLineTerminator, etc.)
@@ -9,6 +10,8 @@ import org.antlr.v4.runtime.*;
  */
 public abstract class GoParserBase extends Parser
 {
+    public SymbolTable sym = SymbolTableFactory.getInstance();
+
     protected GoParserBase(TokenStream input) {
         super(input);
     }

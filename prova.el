@@ -1,11 +1,17 @@
 package main
 
-import "fmt"
+import (
+
+	"fmt"
+	"os"
+)
 
 func main() {
-	for i := 1; i <= 5; i++ {
-		fmt.Printf("Hello, World! This is message #%d\n", i)
-	}
+	// Apri 
+	    x load "test.csv" 
 
-	->> "prova"
+		for i, record := range x {
+    		fmt.Printf("Record %d: %+v\n", i, record)
+    	}
+
 }

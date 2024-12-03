@@ -80,8 +80,8 @@ constSpec
     : identifierList (type_? ASSIGN expressionList)?
     ;
 
-identifierList
-    : IDENTIFIER (COMMA IDENTIFIER)*
+identifierList returns [String value]
+    : IDENTIFIER (COMMA IDENTIFIER)*  {$value = $IDENTIFIER.text;}
     ;
 
 expressionList
@@ -136,11 +136,12 @@ receiver
     ;
 
 varDecl
-    : VAR (varSpec | L_PAREN (varSpec eos)* R_PAREN)
+    : VAR (val = varSpec | L_PAREN (varSpec eos)* R_PAREN) {System.out.println($val.toReturn); if(sym.getRecord($val.toReturn,0,0) != null){throw new IllegalStateException("variable '" + $val.toReturn + "' already declared in this scope.");}
+                                                            sym.put($val.toReturn, 1,0,0,0,0); }
     ;
 
-varSpec
-    : identifierList (type_ (ASSIGN expressionList)? | ASSIGN expressionList)
+varSpec returns [String toReturn]
+    : (x = identifierList) (type_ (ASSIGN expressionList)? | ASSIGN expressionList) {$toReturn = $x.value; System.out.println("ao" + $x.value);}
     ;
 
 block
@@ -168,7 +169,7 @@ statement
     | forStmt
     | deferStmt
     | printExpr
-
+    | loadCSV
     ;
 
 simpleStmt
@@ -200,7 +201,7 @@ assign_op
     ;
 
 shortVarDecl
-    : identifierList DECLARE_ASSIGN expressionList
+    : val = identifierList DECLARE_ASSIGN expressionList {if(sym.getRecord($val.text,0,0) != null){throw new IllegalStateException("Il record con il nome '" + $val.text + "' esiste già.");}sym.put($val.text, 1,0,0,0,0);}
     ;
 
 labeledStmt
@@ -538,4 +539,10 @@ eos
     | EOF
     | EOS
     | {this.closingBracket()}?
+    ;
+
+
+ // golang EL1 rules
+loadCSV
+    : IDENTIFIER LOAD string_ (COLON RUNE_LIT)? {if(sym.getRecord($IDENTIFIER.text,0,0) != null){throw new IllegalStateException("variable '" + $IDENTIFIER.text + "' already declared in this scope.");}}
     ;

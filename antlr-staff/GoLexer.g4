@@ -40,6 +40,13 @@
 
 lexer grammar GoLexer;
 
+options{
+    superClass = GoLexerBase;
+}
+
+// Golang EL1 keywords
+LOAD        :'load';
+
 // Keywords
 
 BREAK       : 'break' -> mode(NLSEMI);
