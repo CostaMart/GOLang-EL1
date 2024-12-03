@@ -29,8 +29,22 @@ public class GoLangELCompiler {
             Options options = new Options();
             options.addOption("o", "outputDir", true, "Directory containing output files");
             options.addOption("s", "symbol", false, "prints symbol table values");
+            options.addOption("help", "help", false, "help");
+
             CommandLineParser cmdParser = new DefaultParser();
             CommandLine cmds = cmdParser.parse(options, args);
+
+            if(cmds.hasOption("-help")){
+                System.out.println("""
+                        
+                        Usage: GoLangELCompiler <file name>.el -<options>
+                        
+                        Options available: 
+                        -s prints symbol table values
+                        -o outputDir
+                        """);
+            return;
+            }
 
             if(args.length > 0) {
 
@@ -60,7 +74,7 @@ public class GoLangELCompiler {
                 if(cmds.hasOption("-o")) dir = cmds.getOptionValue("-o");
                 else dir = System.getProperty("user.dir");
 
-                logger.debug(dir.toString());
+                logger.debug(dir);
                 compileGo(rewriter.getText(), fileName, dir);
 
                 if(cmds.hasOption("s")){
