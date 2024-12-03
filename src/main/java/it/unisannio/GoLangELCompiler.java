@@ -97,6 +97,9 @@ public class GoLangELCompiler {
         String currentDir = System.getProperty("user.dir");
         Path startpath = Paths.get(currentDir);
 
+        // genereate exe on windows
+        if(System.getProperty("os.name").contains("Windows")) outputName = outputName.concat(".exe");
+
         // search go in filesystem
         Path path = startpath.resolve("src").resolve("go").resolve("bin").resolve("go");
 
