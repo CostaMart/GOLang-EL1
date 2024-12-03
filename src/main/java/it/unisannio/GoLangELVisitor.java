@@ -20,6 +20,24 @@ class GoLangELVisitor extends GoParserBaseVisitor<String> {
     }
 
     @Override
+    public String visitSourceFile(GoParser.SourceFileContext ctx) {
+
+        // if not import are declared add necessary imports
+        if (ctx.importDecl() != null) {
+            rewriter.insertAfter(ctx.packageClause().stop, """
+                    
+                    
+                     import (
+                    \t"encoding/csv"
+                    \t"fmt"
+                    \t"os"
+                    )""");
+        }
+
+        return super.visitSourceFile(ctx);
+    }
+
+    @Override
     public String visitPrintExpr(GoParser.PrintExprContext ctx) {
         String str = visit(ctx.string_());
         str = str.replace("\"", "");
@@ -39,8 +57,13 @@ class GoLangELVisitor extends GoParserBaseVisitor<String> {
 
         // if not already imported import library for csv manipulation
         List<GoParser.ImportSpecContext> imports = ctx.importSpec();
+
         if(imports.stream().noneMatch((i)-> i.getText().contains("encoding/csv"))){
             rewriter.insertAfter(imports.getLast().stop, "\n\"encoding/csv\"");
+        }
+
+        if(imports.stream().noneMatch((i)-> i.getText().contains("os"))){
+            rewriter.insertAfter(imports.getLast().stop, "\n\"os\"");
         }
 
         return super.visitImportDecl(ctx);

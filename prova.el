@@ -1,13 +1,9 @@
 package main
 
-import (
 
-	"fmt"
-	"os"
-)
 
 func main() {
-	// Apri 
+	// Apri
 	    x load "test.csv" 
 
 		for i, record := range x {
