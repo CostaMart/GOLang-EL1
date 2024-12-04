@@ -17,11 +17,23 @@ public class SymbolTable {
         l.add(new Record(token, beginLine, endLine, endColumn, beginColumn));
     }
 
+    public void put(String lex, int token){
+        if (!table.containsKey(lex)) table.put(lex, new ArrayList<Record>());
+        List<Record> l = table.get(lex);
+        l.add(new Record(token, token));
+    }
+
     // get record info using lex and position in text
     public Record getRecord(String lex,  int beginLine, int beginColum){
         List<Record> l = table.get(lex);
         if (l == null) return null;
         return l.stream().filter((r)-> r.beginColumn == beginColum && r.beginLine == beginLine).findFirst().orElse(null);
+    }
+
+    public Record getRecord(String lex){
+        List<Record> l = table.get(lex);
+        if (l == null) return null;
+        return l.stream().findFirst().orElse(null);
     }
 
     // Metodo per stampare la symbol table
@@ -32,14 +44,14 @@ public class SymbolTable {
             // Stampa l'intestazione della tabella per ogni entry
             System.out.println("\n\n");
             System.out.printf("Tabella per lessema: %s%n", entry.getKey());
-            System.out.printf("%-10s %-10s %-10s %-10s %-10s%n", "token", "ILinea", "FLinea", "IColonna", "FColonna");
+            System.out.printf("%-10s %-10s %-10s %-10s %-10s%n", "token", "ILinea", "FLinea", "IColonna", "type");
             System.out.println("--------------------------------------------------------------");
 
             // Stampa i record associati a quella chiave
             for (Record record : records) {
-                System.out.printf("%-10s %-10d %-10d %-10d %-10d%n",
+                System.out.printf("%-10s %-10d %-10d %-10d %-10s%n",
                         record.token, record.beginLine, record.endLine,
-                        record.beginColumn, record.endColumn);
+                        record.beginColumn, record.getType());
             }
 
             System.out.println("--------------------------------------------------------------");
@@ -98,6 +110,12 @@ public class SymbolTable {
             this.endLine = endLine;
             this.endColumn = endColumn;
             this.beginColumn = beginColumn;
+        }
+
+        public Record(int token, int beginLine) {
+            this.token = token;
+            this.beginLine = beginLine;
+
         }
 
 

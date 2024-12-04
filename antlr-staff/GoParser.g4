@@ -45,6 +45,8 @@ sourceFile
     : packageClause eos (importDecl eos)* ((functionDecl | methodDecl | declaration) eos)* EOF
     ;
 
+
+
 printExpr
     : PRINTER string_
     ;
@@ -136,12 +138,12 @@ receiver
     ;
 
 varDecl
-    : VAR (val = varSpec | L_PAREN (varSpec eos)* R_PAREN) {System.out.println($val.toReturn); if(sym.getRecord($val.toReturn,0,0) != null){throw new IllegalStateException("variable '" + $val.toReturn + "' already declared in this scope.");}
+    : VAR (val = varSpec | L_PAREN (varSpec eos)* R_PAREN) {if(sym.getRecord($val.toReturn,0,0) != null){throw new IllegalStateException("variable '" + $val.toReturn + "' already declared in this scope.");}
                                                             sym.put($val.toReturn, 1,0,0,0,0); }
     ;
 
 varSpec returns [String toReturn]
-    : (x = identifierList) (type_ (ASSIGN expressionList)? | ASSIGN expressionList) {$toReturn = $x.value; System.out.println("ao" + $x.value);}
+    : (x = identifierList) (type_ (ASSIGN expressionList)? | ASSIGN expressionList) {$toReturn = $x.value;}
     ;
 
 block
@@ -154,6 +156,7 @@ statementList
 
 statement
     : declaration
+    | filterCSV
     | labeledStmt
     | simpleStmt
     | goStmt
@@ -170,6 +173,7 @@ statement
     | deferStmt
     | printExpr
     | loadCSV
+
     ;
 
 simpleStmt
@@ -544,5 +548,10 @@ eos
 
  // golang EL1 rules
 loadCSV
-    : IDENTIFIER LOAD string_ (COLON RUNE_LIT)? {if(sym.getRecord($IDENTIFIER.text,0,0) != null){throw new IllegalStateException("variable '" + $IDENTIFIER.text + "' already declared in this scope.");}}
+    : IDENTIFIER LOAD string_ (COLON RUNE_LIT)? {if(sym.getRecord($IDENTIFIER.text,0,0) != null){throw new IllegalStateException("variable '" + $IDENTIFIER.text + "' already declared in this scope.");}
+                                                 sym.put($IDENTIFIER.text, 1,0,0,0,0); sym.updateRecordType($IDENTIFIER.text,0,0,"Dataset");}
+    ;
+
+filterCSV
+    : IDENTIFIER index {}
     ;
