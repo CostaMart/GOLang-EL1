@@ -138,8 +138,7 @@ receiver
     ;
 
 varDecl
-    : VAR (val = varSpec | L_PAREN (varSpec eos)* R_PAREN) {if(sym.getRecord($val.toReturn,0,0) != null){throw new IllegalStateException("variable '" + $val.toReturn + "' already declared in this scope.");}
-                                                            sym.put($val.toReturn, 1,0,0,0,0); }
+    : VAR (val = varSpec | L_PAREN (varSpec eos)* R_PAREN) {sym.put($val.toReturn, scopes); }
     ;
 
 varSpec returns [String toReturn]
@@ -197,7 +196,7 @@ incDecStmt
     ;
 
 assignment
-    : expressionList assign_op expressionList
+    : val = expressionList assign_op val2 = expressionList {sym.assing($val.text,scopes, $val2.text);}
     ;
 
 assign_op
@@ -205,7 +204,7 @@ assign_op
     ;
 
 shortVarDecl
-    : val = identifierList DECLARE_ASSIGN expressionList {if(sym.getRecord($val.text,0,0) != null){throw new IllegalStateException("Il record con il nome '" + $val.text + "' esiste già.");}sym.put($val.text, 1,0,0,0,0);}
+    : val = identifierList DECLARE_ASSIGN expressionList {sym.put($val.text, scopes);}
     ;
 
 labeledStmt
@@ -297,7 +296,7 @@ recvStmt
     ;
 
 forStmt
-    : FOR (expression? | forClause | rangeClause?) block
+    : FOR {int size = scopes.size(); scopes.add($FOR.text + size); sym.put($FOR.text + size, scopes); } (expression? | forClause | rangeClause?) block {System.out.print("pop!"); scopes.pop();}
     ;
 
 forClause
@@ -548,8 +547,7 @@ eos
 
  // golang EL1 rules
 loadCSV
-    : IDENTIFIER LOAD string_ (COLON RUNE_LIT)? {if(sym.getRecord($IDENTIFIER.text,0,0) != null){throw new IllegalStateException("variable '" + $IDENTIFIER.text + "' already declared in this scope.");}
-                                                 sym.put($IDENTIFIER.text, 1,0,0,0,0); sym.updateRecordType($IDENTIFIER.text,0,0,"Dataset");}
+    : IDENTIFIER LOAD string_ (COLON RUNE_LIT)? {sym.put($IDENTIFIER.text, scopes);}
     ;
 
 filterCSV

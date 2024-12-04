@@ -78,7 +78,7 @@ public class GoLangELCompiler {
                 compileGo(rewriter.getText(), fileName, dir);
 
                 if(cmds.hasOption("s")){
-                    SymbolTableFactory.getInstance().printTable();
+                    SymbolTableFactory.getInstance().printSymbolTable();
                 }
 
             }

@@ -4,6 +4,8 @@ import org.antlr.v4.runtime.*;
 import util.SymbolTable;
 import util.SymbolTableFactory;
 
+import java.util.Stack;
+
 /**
  * All parser methods that used in grammar (p, prev, notLineTerminator, etc.)
  * should start with lower case char similar to parser rules.
@@ -11,7 +13,8 @@ import util.SymbolTableFactory;
 public abstract class GoParserBase extends Parser
 {
     public SymbolTable sym = SymbolTableFactory.getInstance();
-
+    public Stack<String> scopes = new Stack<>();
+    
     protected GoParserBase(TokenStream input) {
         super(input);
     }

@@ -1,102 +1,113 @@
 package util;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+import java.util.*;
 
 public class SymbolTable {
-
+    static final Logger logger = LogManager.getLogger("symboltable");
     // hash table -> records in the table are indexed by their lex
-    private final Map<String, List<Record>> table = new HashMap<String, List<Record>>();
+    private final Map<String, Record> table = new HashMap<String, Record>();
 
-    // create a new record in the table
-    public void put(String lex, int token, int beginLine, int endLine, int beginColumn, int endColumn){
-        if (!table.containsKey(lex)) table.put(lex, new ArrayList<Record>());
-        List<Record> l = table.get(lex);
-        l.add(new Record(token, beginLine, endLine, endColumn, beginColumn));
+
+    // put a new value in the table with the given scope, in doing it checks if the symbol is already present in a higer
+    // table in its gerarchy
+    public void put(String lex, Stack<String> scopes){
+        Stack<String> toRevert = (Stack<String>) scopes.clone();
+        Stack<String> working = new Stack<String>();
+
+        // revert for working top down
+        while(!(toRevert.isEmpty())){
+                working.add(toRevert.pop());
+        }
+
+        if(table.get(lex) != null) throw new RuntimeException("Duplicate lexical symbol: " + lex);
+
+        Map<String, Record> t = table;
+
+        while(!working.isEmpty()){
+            String popped = working.pop();
+            logger.debug(popped);
+            Record record= t.get(popped);
+            if (record == null) break;
+            t = record.table;
+            if (working.empty())  break;
+
+        }
+
+            t.put(lex, new Record(1));
     }
 
-    public void put(String lex, int token){
-        if (!table.containsKey(lex)) table.put(lex, new ArrayList<Record>());
-        List<Record> l = table.get(lex);
-        l.add(new Record(token, token));
+    public void assing(String lex, Stack<String> scopes, Object value){
+        Record r = getRecord(lex, scopes);
+        r.setValue(value);
     }
 
-    // get record info using lex and position in text
-    public Record getRecord(String lex,  int beginLine, int beginColum){
-        List<Record> l = table.get(lex);
-        if (l == null) return null;
-        return l.stream().filter((r)-> r.beginColumn == beginColum && r.beginLine == beginLine).findFirst().orElse(null);
+    // returns the most deep scoped reference to the given token, relatively to the given scope
+    public Record getRecord(String lex, Stack<String> scopes){
+        Stack<String> toRevert = (Stack<String>) scopes.clone();
+        Stack<String> working = new Stack<String>();
+
+        // revert for working top down
+        while(!(toRevert.isEmpty())){
+            working.add(toRevert.pop());
+        }
+
+        Record toReturn = table.get(lex);
+        Map<String, Record> t = table;
+        if(t.get(lex) != null) toReturn = t.get(lex);
+
+        do{
+            String s = working.pop();
+            t = t.get(s).table;
+            if(t.get(lex) != null) toReturn = t.get(lex);
+
+        } while(!(working.empty()));
+
+        return toReturn;
+
+
     }
 
-    public Record getRecord(String lex){
-        List<Record> l = table.get(lex);
-        if (l == null) return null;
-        return l.stream().findFirst().orElse(null);
-    }
+    public void printSymbolTable() {
+        System.out.println("Symbol Table:");
+        System.out.println("--------------------------------------------------------------");
+        System.out.printf("%-20s %-10s %-10s %-10s %-10s %-10s%n", "Lexeme", "Token", "B.Line", "E.Line", "B.Col", "E.Col");
+        System.out.println("--------------------------------------------------------------");
+        for (Map.Entry<String, Record> entry : table.entrySet()) {
+            String lexeme = entry.getKey();
+            Record record = entry.getValue();
 
-    // Metodo per stampare la symbol table
-    public void printTable() {
-        for (Map.Entry<String, List<Record>> entry : table.entrySet()) {
-            List<Record> records = entry.getValue();
+            System.out.printf("%-20s %-10d %-10d %-10d %-10d %-10d%n",
+                    lexeme,
+                    record.getToken(),
+                    record.getBeginLine(),
+                    record.getEndLine(),
+                    record.getBeginColumn(),
+                    record.getEndColumn()
+            );
 
-            // Stampa l'intestazione della tabella per ogni entry
-            System.out.println("\n\n");
-            System.out.printf("Tabella per lessema: %s%n", entry.getKey());
-            System.out.printf("%-10s %-10s %-10s %-10s %-10s%n", "token", "ILinea", "FLinea", "IColonna", "type");
-            System.out.println("--------------------------------------------------------------");
-
-            // Stampa i record associati a quella chiave
-            for (Record record : records) {
-                System.out.printf("%-10s %-10d %-10d %-10d %-10s%n",
-                        record.token, record.beginLine, record.endLine,
-                        record.beginColumn, record.getType());
+            // Stampa le informazioni delle tabelle nidificate (se presenti)
+            if (!record.table.isEmpty()) {
+                System.out.println("  Nested Table for: " + lexeme);
+                System.out.println("  ------------------------------------------------------------");
+                record.printTable(); // Usa il metodo di stampa interna
+                System.out.println("  ------------------------------------------------------------");
             }
-
-            System.out.println("--------------------------------------------------------------");
         }
+        System.out.println("--------------------------------------------------------------");
     }
-    
-    public void updateRecordVal(String lex, int beginLine, int beginColumn, Object value) {
-    	List<Record> l = table.get(lex);
-        if (l == null)
-            return;
-        for (int i = 0; i < l.size(); i++) {
-            Record r = l.get(i);
-            if (r.beginColumn == beginColumn && r.beginLine == beginLine) {
-
-                r.setValue(value);
-
-                l.set(i, r);
-                return;            
-                }
-        }
-    }
-    
-    public void updateRecordType(String lex, int beginLine, int beginColumn, String type) {
-    	List<Record> l = table.get(lex);
-        if (l == null)
-            return;
-        for (int i = 0; i < l.size(); i++) {
-            Record r = l.get(i);
-            if (r.beginColumn == beginColumn && r.beginLine == beginLine) {
-
-                r.setType(type);
-
-                l.set(i, r);
-                return;            
-                }
-        }
-    }
-    
 
 
 
 
 
     public class Record {
-    	Object value;
+
+
+        Map<String, Record> table = new HashMap<String, Record>();
+        Object value;
     	String type;
 		int token; // token
         int beginLine; // punto di inizio del lessema nel codice (rispetto alla linea)
@@ -112,12 +123,9 @@ public class SymbolTable {
             this.beginColumn = beginColumn;
         }
 
-        public Record(int token, int beginLine) {
+        public Record(int token) {
             this.token = token;
-            this.beginLine = beginLine;
-
         }
-
 
         public int getToken() {
             return token;
@@ -155,6 +163,27 @@ public class SymbolTable {
 		public void setType(String type) {
 			this.type = type;
 		}
+
+        public void printTable() {
+            for (Map.Entry<String, Record> entry : table.entrySet()) {
+
+
+                // Stampa l'intestazione della tabella per ogni entry
+                System.out.println("\n\n");
+                System.out.printf("Tabella per lessema: %s%n", entry.getKey());
+                System.out.printf("%-10s %-10s %-10s %-10s %-10s%n", "token", "ILinea", "FLinea", "IColonna", "type");
+                System.out.println("--------------------------------------------------------------");
+
+                // Stampa i record associati a quella chiave
+
+
+
+
+
+
+
+            }
+        }
         
     }
 

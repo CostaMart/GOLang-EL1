@@ -21,5 +21,9 @@
             <AppenderRef ref="Console"/>
         </Logger>
 
+        <Logger name="symboltable" level="debug" additivity = "false">
+            <AppenderRef ref="Console"/>
+        </Logger>
+
 </Loggers>
 </Configuration>
