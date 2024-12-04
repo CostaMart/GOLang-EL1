@@ -7,12 +7,13 @@ import java.util.*;
 
 public class SymbolTable {
     static final Logger logger = LogManager.getLogger("symboltable");
+
     // hash table -> records in the table are indexed by their lex
     private final Map<String, Record> table = new HashMap<String, Record>();
 
 
-    // put a new value in the table with the given scope, in doing it checks if the symbol is already present in a higer
-    // table in its gerarchy
+    // put a new value in the table with the given scope, in doing it checks if the symbol is already present in a higher
+    // table in its hierarchy
     public void put(String lex, Stack<String> scopes){
         Stack<String> toRevert = (Stack<String>) scopes.clone();
         Stack<String> working = new Stack<String>();
@@ -22,10 +23,7 @@ public class SymbolTable {
                 working.add(toRevert.pop());
         }
 
-        if(table.get(lex) != null) throw new RuntimeException("Duplicate lexical symbol: " + lex);
-
         Map<String, Record> t = table;
-
         while(!working.isEmpty()){
             String popped = working.pop();
             logger.debug(popped);
@@ -35,7 +33,8 @@ public class SymbolTable {
             if (working.empty())  break;
 
         }
-
+            // check if the value is already defined in the target scope
+            if(t.get(lex) != null) throw new RuntimeException("Duplicate lexical symbol in same scope: " + lex);
             t.put(lex, new Record(1));
     }
 
@@ -44,8 +43,21 @@ public class SymbolTable {
         r.setValue(value);
     }
 
+    public void setType(String lex, Stack<String> scopes, String type){
+        Record r = getRecord(lex, scopes);
+        r.setType(type);
+    }
+
+    public boolean isDataset(String lex, Stack<String> scopes){
+        Record r = getRecord(lex, scopes);
+        if (r.getType() == null) return false;
+        return r.getType().equals("Dataset");
+    }
+
     // returns the most deep scoped reference to the given token, relatively to the given scope
     public Record getRecord(String lex, Stack<String> scopes){
+        try{
+
         Stack<String> toRevert = (Stack<String>) scopes.clone();
         Stack<String> working = new Stack<String>();
 
@@ -58,14 +70,17 @@ public class SymbolTable {
         Map<String, Record> t = table;
         if(t.get(lex) != null) toReturn = t.get(lex);
 
-        do{
+        while(!(working.empty())){
             String s = working.pop();
             t = t.get(s).table;
             if(t.get(lex) != null) toReturn = t.get(lex);
 
-        } while(!(working.empty()));
+        }
 
-        return toReturn;
+        return toReturn;} catch (EmptyStackException e){
+            // change message to make it more suitable for this situation
+           throw new RuntimeException("'"+ lex + "' not declared in this scope");
+        }
 
 
     }
@@ -99,10 +114,6 @@ public class SymbolTable {
         System.out.println("--------------------------------------------------------------");
     }
 
-
-
-
-
     public class Record {
 
 
@@ -114,6 +125,8 @@ public class SymbolTable {
         int endLine; // punto di fine lessema nel codice (rispetto alla linea)
         int beginColumn; // punto di inizio lessema nel codice (rispetto alla colonna)
         int endColumn; // punto di fine lessema nel codice (rispetto alla colonna)
+
+
 
         public Record(int token, int beginLine, int endLine, int endColumn, int beginColumn) {
             this.token = token;

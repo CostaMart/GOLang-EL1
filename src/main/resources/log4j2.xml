@@ -21,7 +21,11 @@
             <AppenderRef ref="Console"/>
         </Logger>
 
-        <Logger name="symboltable" level="debug" additivity = "false">
+        <Logger name="symboltable" level="error" additivity = "false">
+            <AppenderRef ref="Console"/>
+        </Logger>
+
+        <Logger name="visitor" level="debug" additivity = "false">
             <AppenderRef ref="Console"/>
         </Logger>
 

@@ -204,7 +204,7 @@ assign_op
     ;
 
 shortVarDecl
-    : val = identifierList DECLARE_ASSIGN expressionList {sym.put($val.text, scopes);}
+    : val = identifierList DECLARE_ASSIGN val2 = expressionList {sym.put($val.text, scopes); sym.assing($val.text, scopes, $val2.text);}
     ;
 
 labeledStmt
@@ -296,7 +296,7 @@ recvStmt
     ;
 
 forStmt
-    : FOR {int size = scopes.size(); scopes.add($FOR.text + size); sym.put($FOR.text + size, scopes); } (expression? | forClause | rangeClause?) block {System.out.print("pop!"); scopes.pop();}
+    : FOR {int size = scopes.size(); scopes.add($FOR.text + size); sym.put($FOR.text + size, scopes); } (expression? | forClause | rangeClause?) block {scopes.pop();}
     ;
 
 forClause
@@ -547,9 +547,9 @@ eos
 
  // golang EL1 rules
 loadCSV
-    : IDENTIFIER LOAD string_ (COLON RUNE_LIT)? {sym.put($IDENTIFIER.text, scopes);}
+    : IDENTIFIER LOAD string_ (COLON RUNE_LIT)? {sym.put($IDENTIFIER.text, scopes); sym.setType($IDENTIFIER.text, scopes, "Dataset");}
     ;
 
 filterCSV
-    : IDENTIFIER index {}
+    : IDENTIFIER  index {if(!(sym.isDataset($IDENTIFIER.text, scopes))){throw new RuntimeException("trying filter action on non Dataset variable '"+ $IDENTIFIER.text +"'");}}
     ;

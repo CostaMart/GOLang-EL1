@@ -29,6 +29,7 @@ public class GoLangELCompiler {
             Options options = new Options();
             options.addOption("o", "outputDir", true, "Directory containing output files");
             options.addOption("s", "symbol", false, "prints symbol table values");
+            options.addOption("go", "golang", false, "prints symbol table values");
             options.addOption("help", "help", false, "help");
 
             CommandLineParser cmdParser = new DefaultParser();
@@ -75,7 +76,8 @@ public class GoLangELCompiler {
                 else dir = System.getProperty("user.dir");
 
                 logger.debug(dir);
-                compileGo(rewriter.getText(), fileName, dir);
+
+                compileGo(rewriter.getText(), fileName, dir, !cmds.hasOption("go"));
 
                 if(cmds.hasOption("s")){
                     SymbolTableFactory.getInstance().printSymbolTable();
@@ -93,7 +95,7 @@ public class GoLangELCompiler {
 
     }
 
-    public static void compileGo(String goCode, String outputName, String outputDir) throws IOException {
+    public static void compileGo(String goCode, String outputName, String outputDir, boolean delete) throws IOException {
         String currentDir = System.getProperty("user.dir");
         Path startpath = Paths.get(currentDir);
 
@@ -122,7 +124,9 @@ public class GoLangELCompiler {
         }
 
         // delete tempfile
-        Files.delete(tempFile);
+        if (delete) {
+            Files.delete(tempFile);
+        }
     }
 
 }

@@ -1,24 +1,20 @@
 package main
 
-
+import (
+	"fmt"
+)
 
 func main() {
-	// Apri
+        x load "test.csv"
+        x[City == "Houston"]
+        printStringSlice(x)
+    }
 
-	    x load "test.csv"
-		for i, record := range x {
-
-			y:= 0
-			y = 0;
-
-    		fmt.Printf("Record %d: %+v\n", i, record)
-    		for x < 10 {
-    		    
-    		    y = 10;
-    		}
-
-
-    		}
-
-   }
-
+func printStringSlice(slice [][]string) {
+    for _, row := range slice {
+        for _, value := range row {
+            fmt.Printf("%s ", value)
+        }
+        fmt.Println() // Aggiunge una nuova riga dopo ogni riga di dati
+    }
+}
