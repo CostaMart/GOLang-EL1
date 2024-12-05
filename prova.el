@@ -5,9 +5,10 @@ import (
 )
 
 func main() {
-        x load "test.csv"
-        x[Age == 30]
-        printStringSlice(x)
+
+       x load "test.csv" Persons
+       x[Age == 40]
+        fmt.Print(x)
     }
 
 func printStringSlice(slice [][]string) {

@@ -296,7 +296,7 @@ recvStmt
     ;
 
 forStmt
-    : FOR {int size = scopes.size(); scopes.add($FOR.text + "-"+ $FOR.line); sym.put($FOR.text "-"+ $FOR.line , scopes); } (expression? | forClause | rangeClause?) block {scopes.pop();}
+    : FOR {int size = scopes.size(); scopes.add($FOR.text + "-"+ $FOR.line); sym.put($FOR.text + "-" + $FOR.line, scopes); } (expression? | forClause | rangeClause?) block {scopes.pop();}
     ;
 
 forClause
@@ -411,6 +411,7 @@ expression
     ) expression
     | expression LOGICAL_AND expression
     | expression LOGICAL_OR expression
+
     ;
 
 primaryExpr
@@ -547,9 +548,13 @@ eos
 
  // golang EL1 rules
 loadCSV
-    : IDENTIFIER LOAD string_ (COLON RUNE_LIT)? {sym.put($IDENTIFIER.text, scopes); sym.setType($IDENTIFIER.text, scopes, "Dataset");}
+    : IDENTIFIER LOAD string_ IDENTIFIER (COLON RUNE_LIT)? {sym.put($IDENTIFIER(0).getText(), scopes); sym.setType($IDENTIFIER(0).getText(), scopes, $IDENTIFIER(1).getText());}
     ;
 
+operator
+ :  ( EQUALS | NOT_EQUALS | LESS | LESS_OR_EQUALS | GREATER | GREATER_OR_EQUALS)
+ ;
+
 filterCSV
-    : IDENTIFIER  index {if(!(sym.isDataset($IDENTIFIER.text, scopes))){throw new RuntimeException("trying filter action on non Dataset variable '"+ $IDENTIFIER.text +"'");}}
+    : IDENTIFIER  (L_BRACKET IDENTIFIER operator expression R_BRACKET )
     ;
