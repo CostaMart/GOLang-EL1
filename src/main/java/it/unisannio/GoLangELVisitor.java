@@ -14,7 +14,6 @@ import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
-import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -22,6 +21,7 @@ import java.util.Stack;
 
 
 class GoLangELVisitor extends GoParserBaseVisitor<String> {
+
     SymbolTable symbolTable = SymbolTableFactory.getInstance();
     private static final Random random = new Random();
     public TokenStreamRewriter rewriter;
@@ -201,7 +201,8 @@ class GoLangELVisitor extends GoParserBaseVisitor<String> {
 
 
        String toAdd = String.join("\n", declareVar,forDeclar,forBlock,insideInternalIf,closeBRKT,assignToVar);
-        logger.debug("to Add:" + toAdd);
+
+       logger.debug("to Add:" + toAdd);
        rewriter.replace(ctx.start, ctx.stop, toAdd);
         return super.visitFilterCSV(ctx);
     }
@@ -219,5 +220,12 @@ class GoLangELVisitor extends GoParserBaseVisitor<String> {
         // pop out of 'if' scope when IF structure ends
         scopes.pop();
         return result;
+    }
+
+    @Override
+    public String visitMapCSV(GoParser.MapCSVContext ctx) {
+
+
+        return super.visitMapCSV(ctx);
     }
 }

@@ -126,7 +126,7 @@ typeTerm
 // Function declarations
 
 functionDecl
-    : FUNC IDENTIFIER typeParameters? signature block?
+    : FUNC IDENTIFIER typeParameters? signature block? {String sign = $signature.params_return; sym.put($IDENTIFIER.text, scopes); sym.assing($IDENTIFIER.text, scopes, createfunctionRecord($signature.params_return));}
     ;
 
 methodDecl
@@ -172,6 +172,7 @@ statement
     | deferStmt
     | printExpr
     | loadCSV
+    | mapCSV
 
     ;
 
@@ -379,8 +380,8 @@ functionType
     : FUNC signature
     ;
 
-signature
-    : parameters result?
+signature returns [String params_return]
+    : parameters {$params_return = $parameters.text;} result? {$params_return = $params_return + "-" + $result.text;}
     ;
 
 result
@@ -557,4 +558,8 @@ operator
 
 filterCSV
     : IDENTIFIER  (L_BRACKET IDENTIFIER operator expression R_BRACKET )
+    ;
+
+mapCSV
+    : IDENTIFIER MAPFUNC (IDENTIFIER | functionLit)
     ;

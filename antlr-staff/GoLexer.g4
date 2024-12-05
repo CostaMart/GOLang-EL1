@@ -46,6 +46,7 @@ options{
 
 // Golang EL1 keywords
 LOAD        :'load';
+MAPFUNC        : '<<-';
 
 // Keywords
 

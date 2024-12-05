@@ -3,7 +3,7 @@ package generated;
 import org.antlr.v4.runtime.*;
 import util.SymbolTable;
 import util.SymbolTableFactory;
-
+import util.FunctionRecord;
 import java.util.Stack;
 
 /**
@@ -18,6 +18,8 @@ public abstract class GoParserBase extends Parser
     protected GoParserBase(TokenStream input) {
         super(input);
     }
+
+    public FunctionRecord createfunctionRecord(String params){return new FunctionRecord(params);}
 
 
     /**

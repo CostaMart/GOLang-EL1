@@ -25,7 +25,7 @@
             <AppenderRef ref="Console"/>
         </Logger>
 
-        <Logger name="visitor" level="error" additivity = "false">
+        <Logger name="visitor" level="debug" additivity = "false">
             <AppenderRef ref="Console"/>
         </Logger>
 
