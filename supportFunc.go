@@ -2,6 +2,8 @@ package main
 
 import "strconv"
 
+// utility functions
+
 func ConvertString(input string) (string, *int, *float64) {
 	// Prova a convertire in un intero
 	if intValue, err := strconv.Atoi(input); err == nil {

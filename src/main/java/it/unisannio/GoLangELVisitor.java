@@ -15,6 +15,7 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.text.MessageFormat;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 import java.util.Stack;
@@ -25,7 +26,7 @@ class GoLangELVisitor extends GoParserBaseVisitor<String> {
     private static final Random random = new Random();
     public TokenStreamRewriter rewriter;
     static final Logger logger = LogManager.getLogger("visitor");
-    org.antlr.v4.runtime.Token main;
+    org.antlr.v4.runtime.Token main; // point first function of the file starts, used to create structs on top
     Stack<String> scopes = new Stack<>();
 
     public GoLangELVisitor (TokenStreamRewriter rewriter) {
@@ -104,38 +105,49 @@ class GoLangELVisitor extends GoParserBaseVisitor<String> {
         csv = csv.replace("\"","");
         String  typeName = ctx.IDENTIFIER(1).getText();
 
-        // ---- study csv
-        try {
-            FileReader reader = new FileReader(csv);
-            BufferedReader br = new BufferedReader(reader);
 
-            String intestazione = br.readLine();
-            logger.debug(intestazione);
-            String[] intestazioneSplit = intestazione.split(",");
-
-            String firstline = br.readLine();
-            String[] firstlineSplit = firstline.split(",");
-
-            String toAdd = "";
-            for (int x = 0; x < intestazioneSplit.length; x++) {
-                toAdd = toAdd.concat(intestazioneSplit[x] + " " + Utilities.getTGoType(firstlineSplit[x]) + "\n" );
-            }
-
-            String struct = String.format("type %s struct {\n %s }\n", typeName, toAdd);
-            rewriter.insertBefore(main, struct);
-            logger.debug(struct);
-
-
-
-        } catch (FileNotFoundException e) {
-            throw new RuntimeException(e);
-
-        } catch (IOException e) {
-
-            throw new RuntimeException(e);
+        // add new dataset to dataset symboltable
+        if (symbolTable.getRecord("datasets") == null){
+            symbolTable.put("datasets", new Stack<>());
+            symbolTable.assing("datasets", new Stack<>(), new ArrayList<String>());
         }
-        // -------------------
 
+
+        // ---- study csv
+        // create only if struct doesn't already exist
+        if(!(((List<String>)symbolTable.getRecord("datasets").getValue()).contains(typeName))){
+            try {
+                FileReader reader = new FileReader(csv);
+                BufferedReader br = new BufferedReader(reader);
+
+                String intestazione = br.readLine();
+                logger.debug(intestazione);
+                String[] intestazioneSplit = intestazione.split(",");
+
+                String firstline = br.readLine();
+                String[] firstlineSplit = firstline.split(",");
+
+                String toAdd = "";
+                for (int x = 0; x < intestazioneSplit.length; x++) {
+                    toAdd = toAdd.concat(intestazioneSplit[x] + " " + Utilities.getTGoType(firstlineSplit[x]) + "\n" );
+                }
+
+                String struct = String.format("type %s struct {\n %s }\n", typeName, toAdd);
+                rewriter.insertBefore(main, struct);
+                logger.debug(struct);
+
+
+
+            } catch (FileNotFoundException e) {
+                throw new RuntimeException(e);
+
+            } catch (IOException e) {
+
+                throw new RuntimeException(e);
+            }
+        }
+
+        // -------------------
         // generate go
         String identifier = ctx.IDENTIFIER(0).getText();
         String decoder = "decoder" + Integer.toString(Math.abs(random.nextInt()));
@@ -149,6 +161,17 @@ class GoLangELVisitor extends GoParserBaseVisitor<String> {
 
         String code = String.join("\n", comment, openFile, deferring, containerDecl, decode,  endComment);
         rewriter.replace(ctx.start, ctx.stop, code);
+
+
+
+        SymbolTable.Record r = symbolTable.getRecord("datasets", new Stack<>());
+        List<String> value = (List<String>)r.getValue();
+
+        if(!(value.contains(typeName))){
+            value.add(typeName);
+            r.setValue(value);
+        }
+
         return super.visitLoadCSV(ctx);
     }
 
@@ -156,6 +179,7 @@ class GoLangELVisitor extends GoParserBaseVisitor<String> {
     public String visitFilterCSV(GoParser.FilterCSVContext ctx) {
         String code = Integer.toString(Math.abs(random.nextInt()));
 
+        // get what you need to generate code
        String variable = ctx.IDENTIFIER().get(0).getText();
        String type = symbolTable.getRecord(variable, scopes).getType();
        String firstOpExpression = ctx.IDENTIFIER(1).getText();
@@ -185,13 +209,14 @@ class GoLangELVisitor extends GoParserBaseVisitor<String> {
 
     @Override
     public String visitIfStmt(GoParser.IfStmtContext ctx) {
+        // push new scope in stack when 'if' starts
         scopes.push("if" + "-" + ctx.IF.getLine());
         logger.debug(scopes);
-
-        // visit deeper
+        // visi deeper
         String result = super.visitIfStmt(ctx);
-        // return from visit
 
+
+        // pop out of 'if' scope when IF structure ends
         scopes.pop();
         return result;
     }

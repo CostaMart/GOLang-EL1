@@ -54,7 +54,13 @@ public class SymbolTable {
         return r.getType().equals("Dataset");
     }
 
-    // returns the most deep scoped reference to the given token, relatively to the given scope
+    // access first layer tables
+    public Record getRecord(String lex){
+        return table.get(lex);
+    }
+
+
+    // returns the deepest scoped reference to the given token, relatively to the given scope
     public Record getRecord(String lex, Stack<String> scopes){
         try{
 
