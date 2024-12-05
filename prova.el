@@ -5,15 +5,13 @@ import (
 )
 
 func main() {
-
-
        x load "test.csv" Persons
-       x[Age == 40]
-       x <<- printStringSlice
-
+       y load "test.csv" Persons
+       x[Age > 30]
+       fmt.Print(x)
     }
 
-func printStringSlice(slice [][]string, val int) int {
+func printStringSlice(slice [][]string) {
     for _, row := range slice {
         for _, value := range row {
             fmt.Printf("%s ", value)

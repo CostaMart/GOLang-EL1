@@ -8,7 +8,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import util.SymbolTable;
 import util.SymbolTableFactory;
-import util.Utilities;
+import util.GoUtilities;
 
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
@@ -129,7 +129,7 @@ class GoLangELVisitor extends GoParserBaseVisitor<String> {
 
                 String toAdd = "";
                 for (int x = 0; x < intestazioneSplit.length; x++) {
-                    toAdd = toAdd.concat(intestazioneSplit[x] + " " + Utilities.getTGoType(firstlineSplit[x]) + "\n" );
+                    toAdd = toAdd.concat(intestazioneSplit[x] + " " + GoUtilities.getTGoType(firstlineSplit[x]) + "\n" );
                 }
 
                 String struct = String.format("type %s struct {\n %s }\n", typeName, toAdd);
@@ -191,6 +191,7 @@ class GoLangELVisitor extends GoParserBaseVisitor<String> {
        logger.debug("the type is " + type);
 
         // generate go
+        String firm = "\n// generated from visitFilterCSV start--";
        String declareVar = String.format("var filtered%s []%s", code, type);
        String forDeclar = String.format("for _, people%s := range %s {", code, variable);
        String forBlock = String.format("if people%s.%s %s %s {",code, firstOpExpression, opreator,secondOpExpression);
@@ -198,9 +199,9 @@ class GoLangELVisitor extends GoParserBaseVisitor<String> {
        String closeBRKT ="\t}\n" +
                "\t}";
        String assignToVar = String.format("%s = filtered%s", variable, code);
+        String closeFirm = "//----------------------------------\n";
 
-
-       String toAdd = String.join("\n", declareVar,forDeclar,forBlock,insideInternalIf,closeBRKT,assignToVar);
+       String toAdd = String.join("\n", firm, declareVar,forDeclar,forBlock,insideInternalIf,closeBRKT,assignToVar, closeFirm);
 
        logger.debug("to Add:" + toAdd);
        rewriter.replace(ctx.start, ctx.stop, toAdd);

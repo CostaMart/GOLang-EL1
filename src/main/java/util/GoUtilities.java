@@ -1,6 +1,6 @@
 package util;
 
-public class Utilities {
+public class GoUtilities {
 
     public static String getType(String input) {
         if (input == null || input.isEmpty()) {
