@@ -296,7 +296,7 @@ recvStmt
     ;
 
 forStmt
-    : FOR {int size = scopes.size(); scopes.add($FOR.text + size); sym.put($FOR.text + size, scopes); } (expression? | forClause | rangeClause?) block {scopes.pop();}
+    : FOR {int size = scopes.size(); scopes.add($FOR.text + "-"+ $FOR.line); sym.put($FOR.text "-"+ $FOR.line , scopes); } (expression? | forClause | rangeClause?) block {scopes.pop();}
     ;
 
 forClause

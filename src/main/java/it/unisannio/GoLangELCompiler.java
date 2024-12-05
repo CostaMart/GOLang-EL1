@@ -111,9 +111,18 @@ public class GoLangELCompiler {
         Files.write(tempFile, goCode.getBytes());
 
         // call go compiler
-        ProcessBuilder processBuilder = new ProcessBuilder(path.toAbsolutePath().toString(), "build", "-o",
-                startpath.toAbsolutePath().resolve(outputName).toAbsolutePath().toString(),
-                tempFile.toAbsolutePath().toString());
+        logger.debug("compileGo: " + path.toAbsolutePath().toString());
+        ProcessBuilder processModeInit = new ProcessBuilder(path.toAbsolutePath().toString(), "mod", "init", "main");
+        Process modInit = processModeInit.start();
+
+        try {
+            logger.debug("waiting for mod creation");
+            modInit.waitFor();
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+
+        ProcessBuilder processBuilder = new ProcessBuilder(path.toAbsolutePath().toString(), "build");
         processBuilder.inheritIO();
         Process process = processBuilder.start();
 

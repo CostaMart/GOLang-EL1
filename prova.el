@@ -6,7 +6,7 @@ import (
 
 func main() {
         x load "test.csv"
-        x[City == "Houston"]
+        x[Age == 30]
         printStringSlice(x)
     }
 
