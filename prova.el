@@ -5,10 +5,13 @@ import (
 )
 
 func main() {
-
+    y := 10
+    if y == 10{
        x load "test.csv" Persons
        x[Age == 40]
-        fmt.Print(x)
+       fmt.Print(x)
+       }
+
     }
 
 func printStringSlice(slice [][]string) {

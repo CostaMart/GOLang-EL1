@@ -103,6 +103,7 @@ class GoLangELVisitor extends GoParserBaseVisitor<String> {
         String csv = visitString_(ctx.string_());
         csv = csv.replace("\"","");
         String  typeName = ctx.IDENTIFIER(1).getText();
+
         // ---- study csv
         try {
             FileReader reader = new FileReader(csv);
@@ -130,9 +131,12 @@ class GoLangELVisitor extends GoParserBaseVisitor<String> {
             throw new RuntimeException(e);
 
         } catch (IOException e) {
+
             throw new RuntimeException(e);
         }
+        // -------------------
 
+        // generate go
         String identifier = ctx.IDENTIFIER(0).getText();
         String decoder = "decoder" + Integer.toString(Math.abs(random.nextInt()));
         String openFile = identifier + "_csv, _ := os.Open(\""+ csv+ "\")";
@@ -162,7 +166,7 @@ class GoLangELVisitor extends GoParserBaseVisitor<String> {
        logger.debug("for " + variable + " in " + scopes);
        logger.debug("the type is " + type);
 
-
+        // generate go
        String declareVar = String.format("var filtered%s []%s", code, type);
        String forDeclar = String.format("for _, people%s := range %s {", code, variable);
        String forBlock = String.format("if people%s.%s %s %s {",code, firstOpExpression, opreator,secondOpExpression);
@@ -179,6 +183,16 @@ class GoLangELVisitor extends GoParserBaseVisitor<String> {
     }
 
 
+    @Override
+    public String visitIfStmt(GoParser.IfStmtContext ctx) {
+        scopes.push("if" + "-" + ctx.IF.getLine());
+        logger.debug(scopes);
 
+        // visit deeper
+        String result = super.visitIfStmt(ctx);
+        // return from visit
 
+        scopes.pop();
+        return result;
+    }
 }

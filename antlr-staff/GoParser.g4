@@ -236,7 +236,7 @@ deferStmt
     ;
 
 ifStmt
-    : IF (expression | eos expression | simpleStmt eos expression) block (ELSE (ifStmt | block))?
+    : IF {scopes.add($IF.text + "-"+ $IF.line); sym.put($IF.text + "-" + $IF.line, scopes);} (expression | eos expression | simpleStmt eos expression) block (ELSE (ifStmt | block))? {scopes.pop();}
     ;
 
 switchStmt
@@ -296,7 +296,7 @@ recvStmt
     ;
 
 forStmt
-    : FOR {int size = scopes.size(); scopes.add($FOR.text + "-"+ $FOR.line); sym.put($FOR.text + "-" + $FOR.line, scopes); } (expression? | forClause | rangeClause?) block {scopes.pop();}
+    : FOR {scopes.add($FOR.text + "-"+ $FOR.line); sym.put($FOR.text + "-" + $FOR.line, scopes); } (expression? | forClause | rangeClause?) block {scopes.pop();}
     ;
 
 forClause
