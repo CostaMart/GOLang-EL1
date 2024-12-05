@@ -549,7 +549,7 @@ eos
 
 
  // golang EL1 rules
-loadCSV
+loadCSV // TODO: semantic rules for this: e.g. variable must not be already defined
     : IDENTIFIER LOAD string_ IDENTIFIER (COLON RUNE_LIT)? {sym.put($IDENTIFIER(0).getText(), scopes); sym.setType($IDENTIFIER(0).getText(), scopes, $IDENTIFIER(1).getText());}
     ;
 
@@ -561,6 +561,6 @@ filterCSV
     : IDENTIFIER  (L_BRACKET IDENTIFIER operator expression R_BRACKET )
     ;
 
-mapCSV
+mapCSV // TODO: semantic rules for this: e.g. mapping func must take in input correct param
     : IDENTIFIER MAPFUNC (IDENTIFIER | functionLit)
     ;
