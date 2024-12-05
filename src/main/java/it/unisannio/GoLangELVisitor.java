@@ -224,8 +224,6 @@ class GoLangELVisitor extends GoParserBaseVisitor<String> {
 
     @Override
     public String visitMapCSV(GoParser.MapCSVContext ctx) {
-
-
         return super.visitMapCSV(ctx);
     }
 }

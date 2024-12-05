@@ -126,7 +126,8 @@ typeTerm
 // Function declarations
 
 functionDecl
-    : FUNC IDENTIFIER typeParameters? signature block? {String sign = $signature.params_return; sym.put($IDENTIFIER.text, scopes); sym.assing($IDENTIFIER.text, scopes, createfunctionRecord($signature.params_return));}
+    : FUNC IDENTIFIER typeParameters? signature block? {String sign = $signature.params_return; sym.put($IDENTIFIER.text, scopes); sym.assing($IDENTIFIER.text, scopes, createfunctionRecord($signature.params_return));
+                                                            sym.setType($IDENTIFIER.text, scopes, "func");}
     ;
 
 methodDecl
