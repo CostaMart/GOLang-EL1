@@ -558,7 +558,7 @@ operator
  ;
 
 filterCSV
-    : IDENTIFIER  (L_BRACKET IDENTIFIER operator expression R_BRACKET )
+    : expression  (L_BRACKET IDENTIFIER operator expression R_BRACKET )
     ;
 
 mapCSV // TODO: semantic rules for this: e.g. mapping func must take in input correct param

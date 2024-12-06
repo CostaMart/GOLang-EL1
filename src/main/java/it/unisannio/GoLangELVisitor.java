@@ -7,6 +7,7 @@ import org.antlr.v4.runtime.TokenStreamRewriter;
 import org.antlr.v4.runtime.tree.TerminalNode;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import util.DatasetRecord;
 import util.SymbolTable;
 import util.SymbolTableFactory;
 import util.GoUtilities;
@@ -107,13 +108,13 @@ class GoLangELVisitor extends GoParserBaseVisitor<String> {
         // add new dataset to dataset symboltable
         if (symbolTable.getRecord("datasets") == null){
             symbolTable.put("datasets", new Stack<>());
-            symbolTable.assing("datasets", new Stack<>(), new ArrayList<String>());
+            symbolTable.assing("datasets", new Stack<>(), new HashMap<String, DatasetRecord>());
         }
 
 
         // ---- study csv
         // create only if struct doesn't already exist
-        if(!(((List<String>)symbolTable.getRecord("datasets").getValue()).contains(typeName))){
+        if(!(((HashMap<String, DatasetRecord>)symbolTable.getRecord("datasets").getValue())).containsKey(typeName)){
             try {
                 FileReader reader = new FileReader(csv);
                 BufferedReader br = new BufferedReader(reader);
@@ -134,7 +135,13 @@ class GoLangELVisitor extends GoParserBaseVisitor<String> {
                 rewriter.insertBefore(main, struct);
                 logger.debug(struct);
 
+                SymbolTable.Record r = symbolTable.getRecord("datasets", new Stack<>());
+                HashMap<String, DatasetRecord> value = (HashMap<String, DatasetRecord>) r.getValue();
 
+                if(!(value.containsKey(typeName))){
+                    value.put(typeName, new DatasetRecord(intestazioneSplit));
+                    r.setValue(value);
+                }
 
             } catch (FileNotFoundException e) {
                 throw new RuntimeException(e);
@@ -162,13 +169,7 @@ class GoLangELVisitor extends GoParserBaseVisitor<String> {
 
 
 
-        SymbolTable.Record r = symbolTable.getRecord("datasets", new Stack<>());
-        List<String> value = (List<String>)r.getValue();
 
-        if(!(value.contains(typeName))){
-            value.add(typeName);
-            r.setValue(value);
-        }
 
         return super.visitLoadCSV(ctx);
     }
