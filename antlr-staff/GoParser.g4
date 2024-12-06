@@ -549,7 +549,8 @@ eos
 
 
  // golang EL1 rules
- 
+
+
           // TODO: changed sintax check if everything still works
 loadCSV // TODO: semantic rules for this: e.g. variable must not be already defined
     : LOAD string_ IDENTIFIER IN IDENTIFIER  {sym.put($IDENTIFIER(1).getText(), scopes); sym.setType($IDENTIFIER(1).getText(), scopes, $IDENTIFIER(0).getText());}

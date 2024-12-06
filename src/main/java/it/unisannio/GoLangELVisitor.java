@@ -25,12 +25,34 @@ class GoLangELVisitor extends GoParserBaseVisitor<String> {
     private static final Random random = new Random();
     public TokenStreamRewriter rewriter;
     static final Logger logger = LogManager.getLogger("visitor");
+
     org.antlr.v4.runtime.Token main; // point first function of the file starts, used to create structs on top
+    org.antlr.v4.runtime.Token importEnd;
+    org.antlr.v4.runtime.Token packageDeclaration;
+
+    // keep track of scope during code analysis
     Stack<String> scopes = new Stack<>();
+
+    // necessary to understand if its necessary to add dependencies
+    static boolean IMPORTSPRESENT = false;
+    static boolean OSUSED, GOCSVUSED, FMTUSED = false;
+    static boolean OSPRESENT, GOCSVPRESENT, FMTPRESENT = false;
+
+
+    @Override
+    public String visitPackageClause(GoParser.PackageClauseContext ctx) {
+        packageDeclaration = ctx.stop;
+        return super.visitPackageClause(ctx);
+    }
 
     public GoLangELVisitor (TokenStreamRewriter rewriter) {
         super();
         this.rewriter = rewriter;
+    }
+
+    @Override
+    public String visitParameterDecl(GoParser.ParameterDeclContext ctx) {
+        return super.visitParameterDecl(ctx);
     }
 
     @Override
@@ -48,7 +70,26 @@ class GoLangELVisitor extends GoParserBaseVisitor<String> {
                     )""");
         }
         main = ctx.functionDecl(0).start;
-        return super.visitSourceFile(ctx);
+        String value = super.visitSourceFile(ctx);
+        String imports = "";
+        if (!IMPORTSPRESENT)
+            imports = "\n import (";
+        if(!FMTPRESENT && FMTUSED)
+            imports = imports.concat("\n\"fmt\"");
+
+        if(!OSPRESENT && OSUSED)
+            imports = imports.concat("\n\"os\"");
+
+        if(!GOCSVPRESENT && GOCSVUSED)
+            imports = imports.concat("\n\"github.com/gocarina/gocsv\"");
+
+        if (!IMPORTSPRESENT)
+            imports = imports.concat(")");
+
+        if (!IMPORTSPRESENT) rewriter.insertAfter(packageDeclaration, imports);
+        else rewriter.insertAfter(importEnd, imports);
+
+        return value;
     }
 
     @Override
@@ -80,24 +121,40 @@ class GoLangELVisitor extends GoParserBaseVisitor<String> {
 
     @Override
     public String visitImportDecl(GoParser.ImportDeclContext ctx) {
+        IMPORTSPRESENT = true;
+
         boolean verità = false;
         // if not already imported import library for csv manipulation
         List<GoParser.ImportSpecContext> imports = ctx.importSpec();
 
-        if(imports.stream().noneMatch((i)-> i.getText().contains("\"github.com/gocarina/gocsv\"\n"))){
-            rewriter.insertAfter(imports.getLast().stop, "\n\"github.com/gocarina/gocsv\"\n");
+        if(imports.stream().anyMatch((i)-> i.getText().contains("\"fmt\"\n"))){
+            FMTPRESENT = true;
         }
 
-        verità = imports.stream().noneMatch((i)-> i.getText().contains("os"));
-        if(imports.stream().noneMatch((i)-> i.getText().contains("os"))){
-            rewriter.insertAfter(imports.getLast().stop, "\n\"os\"");
+
+        if(imports.stream().anyMatch((i)-> i.getText().contains("\"github.com/gocarina/gocsv\"\n"))){
+            GOCSVPRESENT = true;
         }
 
+        verità = imports.stream().anyMatch((i)-> i.getText().contains("os"));
+        if(imports.stream().anyMatch((i)-> i.getText().contains("os"))){
+            OSPRESENT = true;
+        }
+
+        importEnd = imports.getLast().getStop();
         return super.visitImportDecl(ctx);
     }
 
     @Override
     public String visitLoadCSV(GoParser.LoadCSVContext ctx) {
+        GOCSVUSED = true;
+        OSUSED = true;
+        FMTUSED = true;
+
+
+
+
+
         String comment = "\n// generated from visitLoadCSV start--";
         String endComment = "//-------------------------------";
         String csv = visitString_(ctx.string_());
@@ -221,6 +278,7 @@ class GoLangELVisitor extends GoParserBaseVisitor<String> {
     }
 
 
+
     @Override
     public String visitIfStmt(GoParser.IfStmtContext ctx) {
         // push new scope in stack when 'if' starts
@@ -290,4 +348,7 @@ class GoLangELVisitor extends GoParserBaseVisitor<String> {
 
         return super.visitMapCSV(ctx);
     }
+
+
+
 }
