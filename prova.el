@@ -10,7 +10,7 @@ func main() {
 
     x load "test.csv" Person
     y load "test.csv" Person
-
+    x[(Age + Age) %2 == 0]
 
 	fmt.Println(x)
 }

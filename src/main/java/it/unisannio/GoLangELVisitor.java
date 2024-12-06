@@ -179,22 +179,34 @@ class GoLangELVisitor extends GoParserBaseVisitor<String> {
         String code = Integer.toString(Math.abs(random.nextInt()));
 
         // get what you need to generate code
-       String variable = ctx.IDENTIFIER().get(0).getText();
+       String variable = ctx.IDENTIFIER().getText();
        String type = symbolTable.getRecord(variable, scopes).getType();
-       String firstOpExpression = ctx.IDENTIFIER(1).getText();
+
+       String firstOpExpression = ctx.expression(0).getText();
+
        String opreator = ctx.operator().getText();
-       String secondOpExpression = ctx.expression().getText();
+       String secondOpExpression = ctx.expression(1).getText();
 
+       // Check if there are references to members of the struct in the expression
+        Map<String, DatasetRecord> datasets = (Map<String, DatasetRecord>) symbolTable.getRecord("datasets").getValue();
+        DatasetRecord record = datasets.get(type);
+        String[] header = record.getHeader();
 
-       logger.debug("for " + variable + " in " + scopes);
+        // if tehre are reference to the members of the sctruct in the expression of the filter put the name of the variable in front of them to access them correctly
+        // e.g. with a Pesron type dataset: x[Age > 20] -> if variable.Age > 20
+        for(String s : header){
+            firstOpExpression = firstOpExpression.replace(s, "variable" + code + "." + s);
+        }
+
+       logger.debug("for " + firstOpExpression + " in " + scopes);
        logger.debug("the type is " + type);
 
         // generate go
         String firm = "\n// generated from visitFilterCSV start--";
        String declareVar = String.format("var filtered%s []%s", code, type);
-       String forDeclar = String.format("for _, people%s := range %s {", code, variable);
-       String forBlock = String.format("if people%s.%s %s %s {",code, firstOpExpression, opreator,secondOpExpression);
-       String insideInternalIf = String.format("filtered%s = append(filtered%s, people%s)",code, code,code);
+       String forDeclar = String.format("for _, variable%s := range %s {", code, variable);
+       String forBlock = String.format("if %s %s %s {",firstOpExpression, opreator,secondOpExpression);
+       String insideInternalIf = String.format("filtered%s = append(filtered%s, variable%s)",code, code,code);
        String closeBRKT ="\t}\n" +
                "\t}";
        String assignToVar = String.format("%s = filtered%s", variable, code);
