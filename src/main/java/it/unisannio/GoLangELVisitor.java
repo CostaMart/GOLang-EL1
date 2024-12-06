@@ -102,7 +102,7 @@ class GoLangELVisitor extends GoParserBaseVisitor<String> {
         String endComment = "//-------------------------------";
         String csv = visitString_(ctx.string_());
         csv = csv.replace("\"","");
-        String  typeName = ctx.IDENTIFIER(1).getText();
+        String  typeName = ctx.IDENTIFIER(0).getText();
 
 
         // add new dataset to dataset symboltable
@@ -141,6 +141,7 @@ class GoLangELVisitor extends GoParserBaseVisitor<String> {
                 if(!(value.containsKey(typeName))){
                     value.put(typeName, new DatasetRecord(intestazioneSplit));
                     r.setValue(value);
+                    r.setType(typeName);
                 }
 
             } catch (FileNotFoundException e) {
@@ -154,7 +155,7 @@ class GoLangELVisitor extends GoParserBaseVisitor<String> {
 
         // -------------------
         // generate go
-        String identifier = ctx.IDENTIFIER(0).getText();
+        String identifier = ctx.IDENTIFIER(1).getText();
         String decoder = "decoder" + Integer.toString(Math.abs(random.nextInt()));
         String openFile = identifier + "_csv, _ := os.Open(\""+ csv+ "\")";
         String deferring = "defer "+ identifier +"_csv.Close()";
@@ -181,7 +182,7 @@ class GoLangELVisitor extends GoParserBaseVisitor<String> {
         // get what you need to generate code
        String variable = ctx.IDENTIFIER().getText();
        String type = symbolTable.getRecord(variable, scopes).getType();
-
+        logger.debug("thi is type: "  + type + " searching in scope " + scopes);
        String firstOpExpression = ctx.expression(0).getText();
 
        String opreator = ctx.operator().getText();

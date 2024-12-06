@@ -205,7 +205,7 @@ assign_op
     : (PLUS | MINUS | OR | CARET | STAR | DIV | MOD | LSHIFT | RSHIFT | AMPERSAND | BIT_CLEAR)? ASSIGN
     ;
 
-shortVarDecl
+shortVarDecl // TODO: qui bisognerebbe trovare il modo di assegnare il tipo alla variabile, il problema è che a destra puoi averea una qulasiasi cosa.
     : val = identifierList DECLARE_ASSIGN val2 = expressionList {sym.put($val.text, scopes); sym.assing($val.text, scopes, $val2.text);}
     ;
 
@@ -298,7 +298,7 @@ recvStmt
     ;
 
 forStmt
-    : FOR {scopes.add($FOR.text + "-"+ $FOR.line); sym.put($FOR.text + "-" + $FOR.line, scopes); } (expression? | forClause | rangeClause?) block {scopes.pop();}
+    : FOR  (expression? | forClause | rangeClause?) {scopes.add($FOR.text + "-"+ $FOR.line); sym.put($FOR.text + "-" + $FOR.line, scopes); } block {scopes.pop();}
     ;
 
 forClause
@@ -549,8 +549,10 @@ eos
 
 
  // golang EL1 rules
+ 
+          // TODO: changed sintax check if everything still works
 loadCSV // TODO: semantic rules for this: e.g. variable must not be already defined
-    : IDENTIFIER LOAD string_ IDENTIFIER (COLON RUNE_LIT)? {sym.put($IDENTIFIER(0).getText(), scopes); sym.setType($IDENTIFIER(0).getText(), scopes, $IDENTIFIER(1).getText());}
+    : LOAD string_ IDENTIFIER IN IDENTIFIER  {sym.put($IDENTIFIER(1).getText(), scopes); sym.setType($IDENTIFIER(1).getText(), scopes, $IDENTIFIER(0).getText());}
     ;
 
 operator

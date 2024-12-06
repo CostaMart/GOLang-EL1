@@ -47,7 +47,7 @@ options{
 // Golang EL1 keywords
 LOAD        :'load';
 MAPFUNC        : '<<-';
-
+IN             : 'in';
 // Keywords
 
 BREAK       : 'break' -> mode(NLSEMI);

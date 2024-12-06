@@ -11,7 +11,6 @@ public class SymbolTable {
     // hash table -> records in the table are indexed by their lex
     private final Map<String, Record> table = new HashMap<String, Record>();
 
-
     // put a new value in the table with the given scope, in doing it checks if the symbol is already present in a higher
     // table in its hierarchy
     public void put(String lex, Stack<String> scopes){
@@ -29,13 +28,17 @@ public class SymbolTable {
             logger.debug(popped);
             Record record= t.get(popped);
             if (record == null) break;
-            t = record.table;
+                t = record.table;
             if (working.empty())  break;
 
         }
             // check if the value is already defined in the target scope
-            if(t.get(lex) != null) throw new RuntimeException("Duplicate lexical symbol in same scope: " + lex);
-            t.put(lex, new Record(1));
+            if (lex.contains("for-") | lex.contains("if-")){
+                if(t.get(lex) != null)  throw new RuntimeException("Duplicate lexical symbol in same scope: " + lex);
+            }
+
+            Record r = lex.contains("for-") | lex.contains("if-") ? new Record(1, new HashMap<String, Record>()) : new Record(1);
+            t.put(lex, r);
     }
 
     public void assing(String lex, Stack<String> scopes, Object value){
@@ -59,7 +62,6 @@ public class SymbolTable {
         return table.get(lex);
     }
 
-
     // returns the deepest scoped reference to the given token, relatively to the given scope
     public Record getRecord(String lex, Stack<String> scopes){
         try{
@@ -80,10 +82,14 @@ public class SymbolTable {
             String s = working.pop();
             t = t.get(s).table;
             if(t.get(lex) != null) toReturn = t.get(lex);
-
         }
 
-        return toReturn;} catch (EmptyStackException e){
+        // TODO: questo errore va gestito a livello di parser
+        if (toReturn == null) throw new RuntimeException("attempted access to variable '" + lex  + "' out of its scope");
+
+        return toReturn;
+
+        } catch (EmptyStackException e){
             // change message to make it more suitable for this situation
            throw new RuntimeException("'"+ lex + "' not declared in this scope");
         }
@@ -123,7 +129,7 @@ public class SymbolTable {
     public class Record {
 
 
-        Map<String, Record> table = new HashMap<String, Record>();
+        Map<String, Record> table;
         Object value;
     	String type;
 		int token; // token
@@ -143,6 +149,11 @@ public class SymbolTable {
         }
 
         public Record(int token) {
+            this.token = token;
+        }
+
+        public Record(int token, Map<String, Record> table) {
+            this.table = table;
             this.token = token;
         }
 

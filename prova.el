@@ -5,14 +5,20 @@ import (
 )
 
 
-
 func main() {
 
-    x load "test.csv" Person
-    y load "test.csv" Person
-    x[(Age + Age) %2 == 0]
 
-	fmt.Println(x)
+
+    for x := 0; x < 10; x++{
+        load "test.csv" Person in y
+        y[Age % 2 == 0]
+        fmt.Println(y)
+    }
+
+
+
+
+
 }
 
 func double (x *int){
