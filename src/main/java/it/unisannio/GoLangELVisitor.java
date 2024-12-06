@@ -4,6 +4,7 @@ package it.unisannio;
 import generated.GoParser;
 import generated.GoParserBaseVisitor;
 import org.antlr.v4.runtime.TokenStreamRewriter;
+import org.antlr.v4.runtime.tree.TerminalNode;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import util.SymbolTable;
@@ -226,6 +227,45 @@ class GoLangELVisitor extends GoParserBaseVisitor<String> {
     @Override
     public String visitMapCSV(GoParser.MapCSVContext ctx) {
         // TODO: implement this
+        String rndm = Integer.toString(Math.abs(random.nextInt()));
+        String variable = ctx.IDENTIFIER(0).getText();
+        TerminalNode signatureNode = ctx.IDENTIFIER(1);
+
+        // se viene passata la firma di una funzione già definita fai qusta
+        if(signatureNode != null){
+            String signature = signatureNode.getText();
+            // prepare execution
+            String firm = "\n// generated from visitMapCSV start--";
+            String forOnStcut = String.format("""
+                    for i%s, _ := range %s {
+                        %s(&%s[i%s])
+                        }""",rndm, variable, signature,variable, rndm);
+            String closeFirm = "//-------------------------------\n";
+
+            forOnStcut = String.join("\n", firm, forOnStcut, closeFirm);
+            rewriter.replace(ctx.start, ctx.stop, forOnStcut);
+
+        }
+
+        // se viene passata una lambda fai questo
+        else {
+            String funLit = ctx.functionLit().getText();
+            logger.debug("functionLit from method visitMapCSV: " + funLit);
+            // prepare execution
+
+            String firm = "\n// generated from visitMapCSV start--";
+            String instanciateFunct = String.format("function%s := %s \n", rndm, funLit);
+
+            String forOnStcut = String.format("""
+                    for i%s, _ := range %s {
+                        function%s(&%s[i%s])
+                        }""",rndm, variable, rndm, variable, rndm);
+            String closeFirm = "//-------------------------------\n";
+
+            forOnStcut = String.join("\n", firm, instanciateFunct, forOnStcut, closeFirm);
+            rewriter.replace(ctx.start, ctx.stop, forOnStcut);
+        }
+
         return super.visitMapCSV(ctx);
     }
 }

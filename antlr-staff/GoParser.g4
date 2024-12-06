@@ -198,7 +198,7 @@ incDecStmt
     ;
 
 assignment
-    : val = expressionList assign_op val2 = expressionList {sym.assing($val.text,scopes, $val2.text);}
+    : val = expressionList assign_op val2 = expressionList {}
     ;
 
 assign_op

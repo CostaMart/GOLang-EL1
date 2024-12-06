@@ -20,10 +20,11 @@ import util.SymbolTableFactory;
 
 public class GoLangELCompiler {
     static final Logger logger = LogManager.getLogger("main");
-
+    static String toDo = "run";
     public static void main(String[] args) throws IOException {
 
             try {
+
 
             // setup command line intepreter
             Options options = new Options();
@@ -38,7 +39,7 @@ public class GoLangELCompiler {
             if(cmds.hasOption("-help")){
                 System.out.println("""
                         
-                        Usage: GoLangELCompiler <file name>.el -<options>
+                        Usage: GoLangELCompiler run | build <file name>.el -<options>
                         
                         Options available: 
                         -s prints symbol table values
@@ -47,9 +48,10 @@ public class GoLangELCompiler {
             return;
             }
 
-            if(args.length > 0) {
+            if(args.length > 1) {
 
-                String fileName = args[0];
+                toDo = args[0];
+                String fileName = args[1];
                 if(!(fileName.endsWith(".el"))) throw new IllegalArgumentException(".el file expected");
 
                 CharStream file = CharStreams.fromFileName(fileName);
@@ -77,12 +79,15 @@ public class GoLangELCompiler {
 
                 logger.debug(dir);
 
-                compileGo(rewriter.getText(), fileName, dir, !cmds.hasOption("go"));
+                compileGo(rewriter.getText(), fileName, dir, !cmds.hasOption("go"), toDo);
 
                 if(cmds.hasOption("s")){
                     SymbolTableFactory.getInstance().printSymbolTable();
                 }
 
+            }
+            else{
+                System.err.println("Usage: GoLangELCompiler run | build <file name>");
             }
 
         } catch (ParseException e)
@@ -95,7 +100,7 @@ public class GoLangELCompiler {
 
     }
 
-    public static void compileGo(String goCode, String outputName, String outputDir, boolean delete) throws IOException {
+    public static void compileGo(String goCode, String outputName, String outputDir, boolean delete, String toDo) throws IOException {
         String currentDir = System.getProperty("user.dir");
         Path startpath = Paths.get(currentDir);
 
@@ -121,8 +126,8 @@ public class GoLangELCompiler {
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
-
-        ProcessBuilder processBuilder = new ProcessBuilder(path.toAbsolutePath().toString(), "build");
+        
+        ProcessBuilder processBuilder = new ProcessBuilder(path.toAbsolutePath().toString(), toDo);
         processBuilder.inheritIO();
         Process process = processBuilder.start();
 
