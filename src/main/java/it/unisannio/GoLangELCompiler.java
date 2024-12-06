@@ -114,6 +114,14 @@ public class GoLangELCompiler {
         // create temporary file and write code
         Path tempFile = Files.createTempFile(startpath, "tempGoCode", ".go");
         Files.write(tempFile, goCode.getBytes());
+        ProcessBuilder processBuilderFormat = new ProcessBuilder(path.toAbsolutePath().toString(), "fmt");
+        Process formatter = processBuilderFormat.start();
+        try {
+            formatter.waitFor();
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+
 
         // call go compiler
         logger.debug("compileGo: " + path.toAbsolutePath().toString());
@@ -126,7 +134,7 @@ public class GoLangELCompiler {
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
-        
+
         ProcessBuilder processBuilder = new ProcessBuilder(path.toAbsolutePath().toString(), toDo);
         processBuilder.inheritIO();
         Process process = processBuilder.start();

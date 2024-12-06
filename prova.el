@@ -1,29 +1,32 @@
 package main
 
 import (
-	"fmt"
+"fmt"
 )
 
+
+
 func main() {
-       x load "test.csv" Persons
-       y load "test.csv" Persons
-       x[Age > 30]
 
-       x <<- func (x *Persons) {
-	            x.Age = x.Age*2
-                }
+    x load "test.csv" Person
 
-       fmt.Print(x)
-    }
+	var s []int
+	s = append(s, 10)
+	s = append(s, 10)
 
-func printStringSlice(slice [][]string) {
-    for _, row := range slice {
-        for _, value := range row {
-            fmt.Printf("%s ", value)
-        }
-        fmt.Println() // Aggiunge una nuova riga dopo ogni riga di dati
-    }
+	s <<- double
+
+    fmt.Println(s)
+
+	x <<- func (p *Person){
+	    p.Age = p.Age*2
+	}
+
+	fmt.Println(x)
+
 }
 
-
+func double (x *int){
+    *x = *x*2
+}
 

@@ -15,10 +15,7 @@ import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Random;
-import java.util.Stack;
+import java.util.*;
 
 
 class GoLangELVisitor extends GoParserBaseVisitor<String> {
@@ -249,12 +246,23 @@ class GoLangELVisitor extends GoParserBaseVisitor<String> {
 
         // se viene passata una lambda fai questo
         else {
-            String funLit = ctx.functionLit().getText();
-            logger.debug("functionLit from method visitMapCSV: " + funLit);
-            // prepare execution
+            String codeBlock = ctx.functionLit().block().getText();
+            List<GoParser. ParameterDeclContext> codeParams = ctx.functionLit().signature().parameters().parameterDecl();
 
+            // recupero nome delle variabili della funzione passata
+            String paramVar = codeParams.getFirst().identifierList().getText();
+            String paramType = codeParams.getFirst().type_().getText();
+            // --------------------
+
+
+            // prepare params string
+            String param = String.format("%s %s", paramVar, paramType);
+            logger.debug("params " + param);
+
+
+            // prepare execution
             String firm = "\n// generated from visitMapCSV start--";
-            String instanciateFunct = String.format("function%s := %s \n", rndm, funLit);
+            String instanciateFunct = String.format("function%s := func (%s) %s\n", rndm,  param, codeBlock);
 
             String forOnStcut = String.format("""
                     for i%s, _ := range %s {
