@@ -139,11 +139,11 @@ receiver
     ;
 
 varDecl
-    : VAR (val = varSpec | L_PAREN (varSpec eos)* R_PAREN) {sym.put($val.toReturn, scopes); }
+    : VAR (varSpec | L_PAREN (varSpec eos)* R_PAREN)
     ;
 
-varSpec returns [String toReturn]
-    : (x = identifierList) (type_ (ASSIGN expressionList)? | ASSIGN expressionList) {$toReturn = $x.value;}
+varSpec
+    : (x = identifierList  ) (t = type_ (ASSIGN expressionList)? | ASSIGN expressionList) {invokeSupportDecl($x.text, $t.text, scopes);}
     ;
 
 block
@@ -174,6 +174,7 @@ statement
     | printExpr
     | loadCSV
     | mapCSV
+    | reduceCSV
 
     ;
 
@@ -323,7 +324,7 @@ typeArgs
     : L_BRACKET typeList COMMA? R_BRACKET
     ;
 
-typeName
+typeName returns [String type]
     : qualifiedIdent
     | IDENTIFIER
     ;
@@ -561,9 +562,13 @@ operator
  ;
 
 filterCSV
-    : IDENTIFIER  (L_BRACKET expression operator expression R_BRACKET )
+    : IDENTIFIER  (L_BRACKET expression operator expression R_BRACKET ) (IN IDENTIFIER)?
     ;
 
 mapCSV // TODO: semantic rules for this: e.g. mapping func must take in input correct param
-    : IDENTIFIER MAPFUNC (IDENTIFIER | functionLit)
+    : IDENTIFIER ELAPPLY (IDENTIFIER | functionLit) (IN IDENTIFIER)?
+    ;
+
+reduceCSV
+    : IDENTIFIER REDUCE (IDENTIFIER | functionLit | MEAN IDENTIFIER) IN IDENTIFIER
     ;

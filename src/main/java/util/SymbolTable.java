@@ -126,6 +126,10 @@ public class SymbolTable {
         System.out.println("--------------------------------------------------------------");
     }
 
+    public void clear(){
+        this.table.clear();
+    }
+
     public class Record {
 
 

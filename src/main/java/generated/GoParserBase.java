@@ -5,6 +5,7 @@ import util.SymbolTable;
 import util.SymbolTableFactory;
 import util.FunctionRecord;
 import java.util.Stack;
+import util.ParserSupport;
 
 /**
  * All parser methods that used in grammar (p, prev, notLineTerminator, etc.)
@@ -17,6 +18,11 @@ public abstract class GoParserBase extends Parser
     
     protected GoParserBase(TokenStream input) {
         super(input);
+    }
+
+    public void invokeSupportDecl(String val, String type, Stack<String> scopes){
+        String[] vals = val.split(",");
+        ParserSupport.manageVarDecl(vals, type, scopes);
     }
 
     public FunctionRecord createfunctionRecord(String params){return new FunctionRecord(params);}

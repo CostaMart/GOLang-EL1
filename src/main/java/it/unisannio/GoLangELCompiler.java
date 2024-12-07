@@ -16,15 +16,19 @@ import org.apache.commons.cli.*;
 import java.io.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import util.SymbolTable;
 import util.SymbolTableFactory;
 
 public class GoLangELCompiler {
     static final Logger logger = LogManager.getLogger("main");
     static String toDo = "run";
+
     public static void main(String[] args) throws IOException {
 
             try {
-
+                // clear symboltable
+                SymbolTable symbolTable = new SymbolTable();
+                symbolTable.clear();
 
             // setup command line intepreter
             Options options = new Options();

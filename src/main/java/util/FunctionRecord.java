@@ -8,6 +8,7 @@ import java.util.function.Function;
 public class FunctionRecord {
 
 
+
     List<String> params = new ArrayList<>();
     List<String> returnVals = new ArrayList<>();
 
@@ -23,6 +24,23 @@ public class FunctionRecord {
             toReturn = s[1].split(",");
         }
         this.returnVals = Arrays.stream(toReturn).toList();
+    }
+
+
+    public List<String> getParams() {
+        return params;
+    }
+
+    public void setParams(List<String> params) {
+        this.params = params;
+    }
+
+    public List<String> getReturnVals() {
+        return returnVals;
+    }
+
+    public void setReturnVals(List<String> returnVals) {
+        this.returnVals = returnVals;
     }
 
 

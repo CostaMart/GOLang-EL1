@@ -1,3 +1,4 @@
+
 package main
 
 import (
@@ -5,26 +6,24 @@ import (
 	"os"
 )
 
-
-
-
 func main() {
+	load "test.csv" Person in y
+
+	var x []Person
+    y <<- male in x
 
 
-
-    for x := 0; x < 10; x++{
-        load "test.csv" Person in y
-        y[Age % 2 == 0]
-        fmt.Println(y)
-    }
-
-
-
-
-
+    fmt.Println(x)
+    fmt.Print(y)
 }
 
-func double (x *int){
-    *x = *x*2
+func printName(p *Person){
+	fmt.Print(p.Name + " ")
 }
 
+func sum(cumulated, single *Person) (value Person) {
+	value.Age = (cumulated.Age + single.Age)/2
+	return
+}
+
+func male(p *Person){ p.Age = p.Age *2 }

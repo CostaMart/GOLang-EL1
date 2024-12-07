@@ -7,10 +7,7 @@ import org.antlr.v4.runtime.TokenStreamRewriter;
 import org.antlr.v4.runtime.tree.TerminalNode;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import util.DatasetRecord;
-import util.SymbolTable;
-import util.SymbolTableFactory;
-import util.GoUtilities;
+import util.*;
 
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
@@ -237,7 +234,7 @@ class GoLangELVisitor extends GoParserBaseVisitor<String> {
         String code = Integer.toString(Math.abs(random.nextInt()));
 
         // get what you need to generate code
-       String variable = ctx.IDENTIFIER().getText();
+       String variable = ctx.IDENTIFIER(0).getText();
        String type = symbolTable.getRecord(variable, scopes).getType();
         logger.debug("thi is type: "  + type + " searching in scope " + scopes);
        String firstOpExpression = ctx.expression(0).getText();
@@ -247,6 +244,7 @@ class GoLangELVisitor extends GoParserBaseVisitor<String> {
 
        // Check if there are references to members of the struct in the expression
         Map<String, DatasetRecord> datasets = (Map<String, DatasetRecord>) symbolTable.getRecord("datasets").getValue();
+        type = type.replace("[", "").replace("]", "");
         DatasetRecord record = datasets.get(type);
         String[] header = record.getHeader();
 
@@ -278,7 +276,6 @@ class GoLangELVisitor extends GoParserBaseVisitor<String> {
     }
 
 
-
     @Override
     public String visitIfStmt(GoParser.IfStmtContext ctx) {
         // push new scope in stack when 'if' starts
@@ -298,18 +295,36 @@ class GoLangELVisitor extends GoParserBaseVisitor<String> {
         // TODO: implement this
         String rndm = Integer.toString(Math.abs(random.nextInt()));
         String variable = ctx.IDENTIFIER(0).getText();
+        String functionLit = null;
+        
+        if (ctx.functionLit() != null)
+            functionLit = ctx.functionLit().getText();
+
         TerminalNode signatureNode = ctx.IDENTIFIER(1);
 
+        String closeFirm = "//-------------------------------\n";
+        String firm = "\n// generated from visitMapCSV start--";
+
+        // check if the target node is in second or third place
+        TerminalNode targetNode;
+        if(functionLit != null){
+            targetNode = ctx.IDENTIFIER(1);
+        }
+        else {
+            targetNode = ctx.IDENTIFIER(2);
+        }
+
+        String forOnStcut = "";
         // se viene passata la firma di una funzione già definita fai qusta
-        if(signatureNode != null){
+        if(functionLit == null){
             String signature = signatureNode.getText();
             // prepare execution
-            String firm = "\n// generated from visitMapCSV start--";
-            String forOnStcut = String.format("""
+
+            forOnStcut = String.format("""
                     for i%s, _ := range %s {
                         %s(&%s[i%s])
                         }""",rndm, variable, signature,variable, rndm);
-            String closeFirm = "//-------------------------------\n";
+
 
             forOnStcut = String.join("\n", firm, forOnStcut, closeFirm);
             rewriter.replace(ctx.start, ctx.stop, forOnStcut);
@@ -333,22 +348,78 @@ class GoLangELVisitor extends GoParserBaseVisitor<String> {
 
 
             // prepare execution
-            String firm = "\n// generated from visitMapCSV start--";
+
             String instanciateFunct = String.format("function%s := func (%s) %s\n", rndm,  param, codeBlock);
 
-            String forOnStcut = String.format("""
+            forOnStcut = String.format("""
                     for i%s, _ := range %s {
                         function%s(&%s[i%s])
                         }""",rndm, variable, rndm, variable, rndm);
-            String closeFirm = "//-------------------------------\n";
 
-            forOnStcut = String.join("\n", firm, instanciateFunct, forOnStcut, closeFirm);
-            rewriter.replace(ctx.start, ctx.stop, forOnStcut);
+
+            forOnStcut = String.join("\n", instanciateFunct, forOnStcut, closeFirm);
+
         }
 
+        // if targetNode is not null the mapping is not in place
+        String type = symbolTable.getRecord(variable, scopes).getType();
+        System.out.println("il tipooooo " + type);
+
+        if (targetNode != null) {
+            String doBefore = String.format(
+                    """
+                            \n x%s := make([]%s, len(%s))
+                                copy( x%s, %s)
+                            """, rndm, type, variable, rndm, variable
+            );
+
+            String doAfter = String.format("""
+                           \n%s = %s
+                           %s = x%s """,targetNode.getText(), variable, variable, rndm);
+
+            forOnStcut = String.join("\n", doBefore, forOnStcut, doAfter);
+        }
+
+        forOnStcut = String.join("\n", firm, forOnStcut, closeFirm);
+        rewriter.replace(ctx.start, ctx.stop, forOnStcut);
         return super.visitMapCSV(ctx);
     }
 
+    @Override
+    public String visitReduceCSV(GoParser.ReduceCSVContext ctx) {
+        String rndm = Integer.toString(Math.abs(random.nextInt()));
+        String variable = ctx.IDENTIFIER(0).getText();
+        TerminalNode signatureNode = ctx.IDENTIFIER(1);
+        String cumulator = ctx.IDENTIFIER(2).getText();
+
+        // se viene passata la firma di una funzione già definita fai qusta
+        if(signatureNode != null){
+            String signature = signatureNode.getText();
+            logger.debug("this is signature " + signature);
+
+            SymbolTable.Record functionSignature = symbolTable.getRecord(signature);
+            FunctionRecord functionrecord = (FunctionRecord) functionSignature.getValue();
+            String[] paramAndType = functionrecord.getParams().get(1).split(" ");
+            String returnVal = functionrecord.getReturnVals().getFirst();
 
 
+            // prepare execution
+            String firm = "\n// generated from visitMapCSV start--";
+
+
+            String forOnStcut = String.format("""
+                    for  _ , element%s := range %s {
+                        %s = %s(&%s, &element%s)
+                        }""",rndm, variable, cumulator, signature, cumulator, rndm);
+            String closeFirm = "//-------------------------------\n";
+
+            forOnStcut = String.join("\n", firm, forOnStcut, closeFirm);
+            rewriter.replace(ctx.start, ctx.stop, forOnStcut);
+        }
+
+
+
+
+        return super.visitReduceCSV(ctx);
+    }
 }
