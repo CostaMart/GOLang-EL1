@@ -143,7 +143,7 @@ varDecl
     ;
 
 varSpec
-    : (x = identifierList  ) (t = type_ (ASSIGN expressionList)? | ASSIGN expressionList) {varDeclRoutine($x.text, $t.text, scopes);}
+    : (x = identifierList  ) (t = type_ (ASSIGN expressionList)? | ASSIGN expressionList) {}
     ;
 
 block
@@ -554,7 +554,7 @@ eos
 
 
 loadCSV // TODO: semantic rules for this: e.g. variable must not be already defined
-    : LOAD string_ IDENTIFIER IN var = IDENTIFIER  {loadCsvSemanticCheck(scopes, $var.text); sym.put($IDENTIFIER(1).getText(), scopes); sym.setType($IDENTIFIER(1).getText(), scopes, "[]" + $IDENTIFIER(0).getText()); }
+    : LOAD string_ IDENTIFIER IN var = IDENTIFIER  {sym.put($IDENTIFIER(1).getText(), scopes); sym.setType($IDENTIFIER(1).getText(), scopes, "[]" + $IDENTIFIER(0).getText()); }
     ;
 
 operator

@@ -8,11 +8,17 @@ import (
 func main() {
 	load "test.csv" Person in y
 
-    y <<- printName
+    for x:= 0; x< 10; x++{
+
+
+        if x %2 == 0 {
+            y <<- printName
+        }
+    }
 
 }
 
-func printName(p *Person) (value Person){
+func printName(p *Person) {
 	fmt.Print(p.Name + " ")
 }
 
