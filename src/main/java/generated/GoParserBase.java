@@ -27,8 +27,6 @@ public abstract class GoParserBase extends Parser
         super(input);
     }
 
-
-
     /**
      * Returns true if the current Token is a closing bracket (")" or "}")
      */
@@ -139,6 +137,13 @@ public abstract class GoParserBase extends Parser
                 throw new RuntimeException(e);
             }
         }
+
+        // check if the target variable is of the right type
+        if(target != null) {
+            String type = sym.getRecord(target, sc).getType();
+           if (!type.equals(datasetType)) throw new RuntimeException("Variable '" + target + "' is not the same type as the dataset: " + datasetType);
+        }
+
     }
 
     /**
@@ -156,14 +161,118 @@ public abstract class GoParserBase extends Parser
         for (String param : fun.getParams()) {
             if (!(param.contains("*" + type))) throw new IllegalArgumentException("function " + functId + " must accept a single parameter of type *" + type);
         }
-        List<String> ret = fun.getParams();
+        List<String> ret = fun.getReturnVals();
 
-        if(ret.size() > 1) throw new IllegalArgumentException("function " + functId + " must return null");
+        if(ret.size() > 1) throw new IllegalArgumentException("function '" + functId + "' must return null to be used with map");
 
         for (String r : fun.getReturnVals()){
-            if(!r.contains("null")) throw new IllegalArgumentException("function " + functId + " must return null");
+            if(!r.contains("null")) throw new IllegalArgumentException("function '" + functId + "' must return null to be used with map");
         }
     }
+
+    /**
+     * Performs a semantic check for the given variable and its associated function or target.
+     * It verifies that the variable has the appropriate collection type and that any associated lambda or
+     * function is correctly defined. The check ensures that the lambda function (if provided) has the correct
+     * parameters and return values, and that the variable is of the correct collection type.
+     *
+     * @param sc the current scope stack, representing the variable's scope and context during parsing
+     * @param varName the name of the variable to check
+     * @param functId the function ID (if any) associated with the variable, used for deferred checks
+     * @param funct the lambda function (if any) associated with the variable, or null if not applicable
+     * @param target the target associated with the variable, used for additional checks (optional)
+     * @throws RuntimeException if the variable does not have the correct collection type, or if the lambda or function is not defined correctly
+     */
+    protected void reduceCSVSematicCheck(Stack<String> sc, String varName, String functId, String funct, String target){
+        String datasetType = sym.getRecord(varName, sc).getType();
+        String elementType = datasetType.replace("[", "").replace("]", "");
+
+        //check if variable is a collection
+        if(!(datasetType.contains("[]"))) throw new RuntimeException("Variable '" + varName + "' has not a collection type");
+
+        // TODO: for now reduce cannot accept lambdas
+        // if it is a lambda do this
+        if(funct != null){
+            String sub;
+            sub = funct.substring(0, funct.indexOf("{"));
+
+            // check if the lambda has the right parameters and if it as no return values
+            Pattern pattern = Pattern.compile(Pattern.quote(elementType));
+            Matcher matcher = pattern.matcher(sub);
+
+            int count = 0;
+            while (matcher.find()) {
+                count++;
+            }
+
+            if(!sub.contains("*"+elementType) || count > 1)
+                throw  new RuntimeException("lambda must accept a single parameter of type *"+ elementType + " and return null to be used in map");
+        }
+        else {
+            // here we check if the function passed has the right parameters and return null, since the function
+            // might be declared at the end of the file we defer this check
+            try {
+                Stack<String> scopy = new Stack<String>();
+                scopy.addAll(sc);
+                // Passaggio del metodo con i tipi corretti
+                Object[] params = new Object[] {scopy, elementType, functId, target};
+                checkStackPut(GoParserBase.class.getDeclaredMethod("reduceCSVSemanticCheckDeferred", Stack.class, String.class, String.class, String.class), params);
+
+            } catch (NoSuchMethodException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        // check if the target variable is of the right type
+        /*if(target != null) {
+            String type = sym.getRecord(target, sc).getType();
+            if (!type.equals(datasetType)) throw new RuntimeException("Variable '" + target + "' is not the same type as the dataset: " + datasetType);
+        }*/
+
+    }
+
+    /**
+     * Deferred semantic check for the function associated with the given function ID. It verifies that the function's
+     * parameters and return values are consistent with the expected type. The check ensures that the function accepts a
+     * single parameter of the expected type, and that the return type is also of the correct type.
+     *
+     * @param sc the current scope stack, representing the function's scope and context during parsing
+     * @param type the expected type of the function parameter
+     * @param functId the function ID to check, used to retrieve the function record for validation
+     * @param target the target associated with the function (optional, for future extensions)
+     * @throws IllegalArgumentException if the function does not accept the correct parameter type or return type
+     */
+    protected void reduceCSVSemanticCheckDeferred(Stack<String> sc, String type, String functId,  String target){
+        FunctionRecord fun = (FunctionRecord) sym.getRecord(functId, sc).getValue();
+        List<String> params = fun.getParams();
+
+        for (int i =0; i < params.size(); i++) {
+            String param = params.get(i);
+            if(i == params.size() -1){
+                if (!(params.get(i).contains("*" + type))) throw new IllegalArgumentException("function '" + functId +
+                        "' must accept a single parameter of type *" + type +
+                        ", function firm must respect following syntax: func " + functId + "(param1, param2 *"+ type +")" );
+            }
+            else if (params.get(i).split(" ").length > 1) throw new IllegalArgumentException("function '" +
+                    functId + "' must accept a single parameter of type *" + type +
+                    ", function firm must respect following syntax: func " + functId + "(param1, param2 *"+ type +")" );
+        }
+        List<String> ret = fun.getReturnVals();
+
+        if(ret.size() > 1) throw new IllegalArgumentException("function " + functId + " must have a single return of type: " + type);
+
+
+        if ((ret.getFirst().contains(type) && !(ret.getFirst().contains("*" + type)) || !(ret.getFirst().contains("[]" + type)))) {
+            throw new IllegalArgumentException("function '" + functId + "' must have a single return of type: " + type);
+        }
+
+    }
+
+
+
+
+
+
 
     /**
      * Executes all deferred semantic checks that were added to the stack during parsing.
@@ -176,7 +285,7 @@ public abstract class GoParserBase extends Parser
                 check.m.invoke(this, check.args);
             } catch (IllegalArgumentException | IllegalAccessException | InvocationTargetException e) {
                 e.getCause().printStackTrace();
-                throw new RuntimeException(e);
+                throw new RuntimeException();
             }
         }
     }

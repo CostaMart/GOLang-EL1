@@ -554,7 +554,7 @@ eos
 
 
 loadCSV // TODO: semantic rules for this: e.g. variable must not be already defined
-    : LOAD string_ IDENTIFIER IN var = IDENTIFIER  {loadCsvSemanticCheck(scopes, $var.text); sym.put($IDENTIFIER(1).getText(), scopes); sym.setType($IDENTIFIER(1).getText(), scopes, "[][]" + $IDENTIFIER(0).getText()); }
+    : LOAD string_ IDENTIFIER IN var = IDENTIFIER  {loadCsvSemanticCheck(scopes, $var.text); sym.put($IDENTIFIER(1).getText(), scopes); sym.setType($IDENTIFIER(1).getText(), scopes, "[]" + $IDENTIFIER(0).getText()); }
     ;
 
 operator
@@ -565,10 +565,10 @@ filterCSV
     : IDENTIFIER  (L_BRACKET expression operator expression R_BRACKET ) (IN IDENTIFIER)?
     ;
 
-mapCSV // TODO: semantic rules for this: e.g. mapping func must take in input correct param
-    : var = IDENTIFIER ELAPPLY ( functID = IDENTIFIER | funct = functionLit) (IN target = IDENTIFIER)? { String vart = $var.text; String functIDt = $functID.text; String functt = $funct.text; String targett = $target.text; System.out.println(vart); mapCSVSematicCheck(scopes, vart, functIDt, functt, targett);}
+mapCSV
+    : var = IDENTIFIER ELAPPLY ( functID = IDENTIFIER | funct = functionLit) (IN target = IDENTIFIER)? {String vart = $var.text; String functIDt = $functID.text; String functt = $funct.text; String targett = $target.text; System.out.println(vart); mapCSVSematicCheck(scopes, vart, functIDt, functt, targett);}
     ;
 
 reduceCSV
-    : IDENTIFIER REDUCE (IDENTIFIER | functionLit | MEAN IDENTIFIER) IN IDENTIFIER
+    : var = IDENTIFIER REDUCE (functID = IDENTIFIER | funct = functionLit | MEAN IDENTIFIER) IN target = IDENTIFIER {String vart = $var.text; String functIDt = $functID.text; String functt = $funct.text; String targett = $target.text; System.out.println(vart); reduceCSVSematicCheck(scopes, vart, functIDt, functt, targett);}
     ;

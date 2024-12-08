@@ -368,7 +368,7 @@ class GoLangELVisitor extends GoParserBaseVisitor<String> {
         if (targetNode != null) {
             String doBefore = String.format(
                     """
-                            \n x%s := make([]%s, len(%s))
+                            \n x%s := make(%s, len(%s))
                                 copy( x%s, %s)
                             """, rndm, type, variable, rndm, variable
             );
