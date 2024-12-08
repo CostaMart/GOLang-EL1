@@ -404,7 +404,7 @@ class GoLangELVisitor extends GoParserBaseVisitor<String> {
 
 
             // prepare execution
-            String firm = "\n// generated from visitMapCSV start--";
+            String firm = "\n// generated from visitReduceCSV start--";
 
 
             String forOnStcut = String.format("""

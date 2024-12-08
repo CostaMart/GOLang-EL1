@@ -85,7 +85,7 @@ public class SymbolTable {
         }
 
         // TODO: questo errore va gestito a livello di parser
-        if (toReturn == null) throw new RuntimeException("attempted access to variable '" + lex  + "' out of its scope");
+        // if (toReturn == null) throw new RuntimeException("attempted access to variable '" + lex  + "' out of its scope");
 
         return toReturn;
 

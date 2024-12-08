@@ -42,7 +42,7 @@ options {
 
 
 sourceFile
-    : packageClause eos (importDecl eos)* ((functionDecl | methodDecl | declaration) eos)* EOF
+    : packageClause eos (importDecl eos)* ((functionDecl | methodDecl | declaration) eos)* EOF {executeDeferredChecks();}
     ;
 
 
@@ -143,7 +143,7 @@ varDecl
     ;
 
 varSpec
-    : (x = identifierList  ) (t = type_ (ASSIGN expressionList)? | ASSIGN expressionList) {invokeSupportDecl($x.text, $t.text, scopes);}
+    : (x = identifierList  ) (t = type_ (ASSIGN expressionList)? | ASSIGN expressionList) {varDeclRoutine($x.text, $t.text, scopes);}
     ;
 
 block
@@ -552,9 +552,9 @@ eos
  // golang EL1 rules
 
 
-          // TODO: changed sintax check if everything still works
+
 loadCSV // TODO: semantic rules for this: e.g. variable must not be already defined
-    : LOAD string_ IDENTIFIER IN IDENTIFIER  {sym.put($IDENTIFIER(1).getText(), scopes); sym.setType($IDENTIFIER(1).getText(), scopes, $IDENTIFIER(0).getText());}
+    : LOAD string_ IDENTIFIER IN var = IDENTIFIER  {loadCsvSemanticCheck(scopes, $var.text); sym.put($IDENTIFIER(1).getText(), scopes); sym.setType($IDENTIFIER(1).getText(), scopes, "[][]" + $IDENTIFIER(0).getText()); }
     ;
 
 operator
@@ -566,7 +566,7 @@ filterCSV
     ;
 
 mapCSV // TODO: semantic rules for this: e.g. mapping func must take in input correct param
-    : IDENTIFIER ELAPPLY (IDENTIFIER | functionLit) (IN IDENTIFIER)?
+    : var = IDENTIFIER ELAPPLY ( functID = IDENTIFIER | funct = functionLit) (IN target = IDENTIFIER)? { String vart = $var.text; String functIDt = $functID.text; String functt = $funct.text; String targett = $target.text; System.out.println(vart); mapCSVSematicCheck(scopes, vart, functIDt, functt, targett);}
     ;
 
 reduceCSV
