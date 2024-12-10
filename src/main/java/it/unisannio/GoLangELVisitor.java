@@ -389,10 +389,21 @@ class GoLangELVisitor extends GoParserBaseVisitor<String> {
     public String visitReduceCSV(GoParser.ReduceCSVContext ctx) {
         String rndm = Integer.toString(Math.abs(random.nextInt()));
         String variable = ctx.IDENTIFIER(0).getText();
-        TerminalNode signatureNode = ctx.IDENTIFIER(1);
-        String cumulator = ctx.IDENTIFIER(2).getText();
+        TerminalNode signatureNode = null;
+        String cumulator;
+        String firm = "\n// generated from visitReduceCSV start--";
+        String closeFirm = "//-------------------------------\n";
+        String forOnStcut = "";
 
-        // se viene passata la firma di una funzione già definita fai qusta
+
+        if (ctx.functionLit() == null) {
+            signatureNode = ctx.IDENTIFIER(1);
+            cumulator = ctx.IDENTIFIER(2).getText();
+        }
+        else {
+            cumulator = ctx.IDENTIFIER(1).getText();
+        }
+        // se viene passata la firma di una funzione già definita fai questa
         if(signatureNode != null){
             String signature = signatureNode.getText();
             logger.debug("this is signature " + signature);
@@ -404,21 +415,62 @@ class GoLangELVisitor extends GoParserBaseVisitor<String> {
 
 
             // prepare execution
-            String firm = "\n// generated from visitReduceCSV start--";
 
 
-            String forOnStcut = String.format("""
+
+            forOnStcut = String.format("""
                     for  _ , element%s := range %s {
                         %s = %s(&%s, &element%s)
                         }""",rndm, variable, cumulator, signature, cumulator, rndm);
-            String closeFirm = "//-------------------------------\n";
+
 
             forOnStcut = String.join("\n", firm, forOnStcut, closeFirm);
             rewriter.replace(ctx.start, ctx.stop, forOnStcut);
         }
+        // gestiamo il caso in cui viene passata una lambda
+        else{
+            String codeBlock = ctx.functionLit().getText();
+            String type = symbolTable.getRecord(variable, scopes).getType();
+            type = type.replace("[","").replace("]","");
+            type = type.trim();
+
+            String returnPart = codeBlock.substring(codeBlock.indexOf(")"), codeBlock.indexOf("{"));
+            String returnPartnew = returnPart.replace(type, " "+ type);
+            codeBlock = codeBlock.replace(returnPart, returnPartnew);
+
+
+            List<GoParser. ParameterDeclContext> codeParams = ctx.functionLit().signature().parameters().parameterDecl();
+           // separa il return altrimenti lo attacca alla variabile
+            codeBlock = codeBlock.replace("return", " return ");
+
+            String createFunVar = String.format("fu%s := " + codeBlock, rndm);
+
+            forOnStcut = String.format("""
+                    for  _ , element%s := range %s {
+                        %s = fu%s(&%s, &element%s)
+                        }""",rndm, variable, cumulator, rndm , cumulator, rndm);
+
+            // recupero nome delle variabili della funzione passata
+            String paramVar = codeParams.getFirst().identifierList().getText();
+            String paramType = codeParams.getFirst().type_().getText();
+            // --------------------
+
+
+            // prepare params string
+            String param = String.format("%s %s", paramVar, paramType);
+            logger.debug("params " + param);
+
+
+            // prepare execution
+
+            forOnStcut = String.join("\n", firm, createFunVar, forOnStcut, closeFirm);
 
 
 
+        }
+
+
+        rewriter.replace(ctx.start, ctx.stop, forOnStcut);
 
         return super.visitReduceCSV(ctx);
     }

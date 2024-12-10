@@ -66,6 +66,8 @@ public class GoLangELCompiler {
                 TokenStreamRewriter rewriter = new TokenStreamRewriter(tokens);
 
                 GoParser parser = new GoParser(tokens);
+
+
                 GoParser.SourceFileContext context = parser.sourceFile();
                 GoLangELVisitor visit = new GoLangELVisitor(rewriter);
                 visit.visit(context);

@@ -570,5 +570,5 @@ mapCSV
     ;
 
 reduceCSV
-    : var = IDENTIFIER REDUCE (functID = IDENTIFIER | funct = functionLit | MEAN IDENTIFIER) IN target = IDENTIFIER {String vart = $var.text; String functIDt = $functID.text; String functt = $funct.text; String targett = $target.text; System.out.println(vart); reduceCSVSematicCheck(scopes, vart, functIDt, functt, targett);}
+    : var = IDENTIFIER REDUCE (functID = IDENTIFIER | funct = functionLit | MEAN IDENTIFIER) IN target = IDENTIFIER {String vart = $var.text; String functIDt = $functID.text; String functt = $funct.text; String targett = $target.text; System.out.println(vart); reduceCSVSemanticCheck(scopes, vart, functIDt, functt, targett);}
     ;

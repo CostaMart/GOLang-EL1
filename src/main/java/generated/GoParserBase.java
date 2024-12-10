@@ -110,20 +110,19 @@ public abstract class GoParserBase extends Parser
 
         // if it is a lambda do this
         if(funct != null){
-            String sub;
-            sub = funct.substring(0, funct.indexOf("{"));
+            String toCheck = "*".concat(elementType);
 
-            // check if the lambda has the right parameters and if it as no return values
-            Pattern pattern = Pattern.compile(Pattern.quote(elementType));
-            Matcher matcher = pattern.matcher(sub);
+            // taglia l'intestazione
+            int ind = funct.indexOf("{");
+            String funHeader = funct.substring(0, ind + 1 );
 
-            int count = 0;
-            while (matcher.find()) {
-                count++;
-            }
+            // check if the required pattern is respected by the regex
+            Pattern pattern = Pattern.compile("func\\s*\\([a-zA-Z_][a-zA-Z0-9_]*\\s*\\*[a-zA-Z_][a-zA-Z0-9_]*\\)\\s*\\{");
+            Matcher matcher = pattern.matcher(funHeader);
+            boolean foundParam = matcher.find();
 
-            if(!sub.contains("*"+elementType) || count > 1)
-                throw  new RuntimeException("lambda must accept a single parameter of type *"+ elementType + " and return null");
+            if(!foundParam)
+                throw  new RuntimeException("lambda must accept a single parameter of type *"+ elementType + " and return null to be used with map statement");
         }
         else {
             // here we check if the function passed has the right parameters and return null, since the function
@@ -185,9 +184,11 @@ public abstract class GoParserBase extends Parser
      * @param target the target associated with the variable, used for additional checks (optional)
      * @throws RuntimeException if the variable does not have the correct collection type, or if the lambda or function is not defined correctly
      */
-    protected void reduceCSVSematicCheck(Stack<String> sc, String varName, String functId, String funct, String target){
+    protected void reduceCSVSemanticCheck(Stack<String> sc, String varName, String functId, String funct, String target){
         String datasetType = sym.getRecord(varName, sc).getType();
         String elementType = datasetType.replace("[", "").replace("]", "");
+
+        if(target == null) throw new RuntimeException("reduce statements requires a target variable");
 
         //check if variable is a collection
         if(!(datasetType.contains("[]"))) throw new RuntimeException("Variable '" + varName + "' has not a collection type");
@@ -195,20 +196,21 @@ public abstract class GoParserBase extends Parser
         // TODO: for now reduce cannot accept lambdas
         // if it is a lambda do this
         if(funct != null){
-            String sub;
-            sub = funct.substring(0, funct.indexOf("{"));
+            
+            String funcHeader;
+            funcHeader = funct.substring(0, funct.indexOf("{") +1 );
+
 
             // check if the lambda has the right parameters and if it as no return values
-            Pattern pattern = Pattern.compile(Pattern.quote(elementType));
-            Matcher matcher = pattern.matcher(sub);
 
-            int count = 0;
-            while (matcher.find()) {
-                count++;
-            }
 
-            if(!sub.contains("*"+elementType) || count > 1)
-                throw  new RuntimeException("lambda must accept a single parameter of type *"+ elementType + " and return null to be used in map");
+            Pattern pattern = Pattern.compile("func\\s*\\(\\s*[a-zA-Z_][a-zA-Z0-9_]*\\s*,\\s*[a-zA-Z_][a-zA-Z0-9_]*\\s*\\*" + elementType+ "\\) \\s*(\\(\\s*[a-zA-Z_][a-zA-Z0-9_]*\\s* " + elementType+"\\)|" + elementType + ")\\s*\\{");
+            Matcher matcher = pattern.matcher(funcHeader);
+
+            boolean found = matcher.find();
+
+            if(!found)
+                throw  new RuntimeException("lambda must accept a single parameter of type *"+ elementType + " and return null to be used in reduce statement e.g: func (cumulated, single *StructType) (StructType)");
         }
         else {
             // here we check if the function passed has the right parameters and return null, since the function
@@ -264,7 +266,7 @@ public abstract class GoParserBase extends Parser
         if(ret.size() > 1) throw new IllegalArgumentException("function " + functId + " must have a single return of type: " + type);
 
 
-        if ((ret.getFirst().contains(type) && !(ret.getFirst().contains("*" + type)) || !(ret.getFirst().contains("[]" + type)))) {
+        if ((!ret.getFirst().contains(type) || (ret.getFirst().contains("*" + type)) || (ret.getFirst().contains("[]" + type)))) {
             throw new IllegalArgumentException("function '" + functId + "' must have a single return of type: " + type);
         }
 
