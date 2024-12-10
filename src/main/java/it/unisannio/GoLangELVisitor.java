@@ -505,19 +505,13 @@ class GoLangELVisitor extends GoParserBaseVisitor<String> {
 
 
 
-        // utilizzando decimali
-        if(ctx.DECIMAL_LIT(0) != null) {
-            train = ctx.DECIMAL_LIT(0).getText();
-            test = ctx.DECIMAL_LIT(1).getText();
-            if(ctx.DECIMAL_LIT(2) != null)
-                validate = ctx.DECIMAL_LIT(2).getText();
-        }else {
+     
             // utilizzando float
             train = ctx.FLOAT_LIT(0).getText();
             test = ctx.FLOAT_LIT(1).getText();
             if (ctx.FLOAT_LIT(2) != null)
                 validate = ctx.FLOAT_LIT(2).getText();
-        }
+
 
         // make a copy
         String makeCopy = String.format("\ncopy%s := make(%s, len(%s))\n copy(copy%s, %s)\n", rndm, variableType.getType(), var, rndm, var);

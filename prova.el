@@ -12,7 +12,8 @@ func main() {
     var test []Person
     var validate []Person
 
-    split y 0 : 1 : 0 in train,test,validate
+
+    split y 0.0 : 1.0 : 0.0 in train,test, validate
 
     fmt.Println(train)
     fmt.Println(test)

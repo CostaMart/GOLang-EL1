@@ -66,7 +66,7 @@ public class SymbolTable {
             Record toReturn = null;
             if (t.get(lex) != null) toReturn = t.get(lex);
 
-            return toReturn == null;
+            return !(toReturn == null);
 
 
         } catch (EmptyStackException e){

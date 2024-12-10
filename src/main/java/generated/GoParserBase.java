@@ -84,7 +84,11 @@ public abstract class GoParserBase extends Parser
      * @param varName the name of the variable to check
      */
     protected void loadCsvSemanticCheck(String varName,Stack<String> sc){
-        if (!sym.isInConflict(varName, sc)) throw new RuntimeException("Variable '" + varName + "' already defined in this scope");
+        if (sym.isInConflict(varName, sc)) throw new RuntimeException("Variable '" + varName + "' already defined in this scope");
+    }
+
+    protected void declareSemanticCheck(String varName, Stack<String> sc){
+        if (sym.isInConflict(varName, sc)) throw new RuntimeException("Variable '" + varName + "' already defined in this scope");
     }
 
 
@@ -270,6 +274,37 @@ public abstract class GoParserBase extends Parser
 
     }
 
+    protected void splitSemanticCheckDeferred(Stack<String> sc, String from, String percentage1, String percentage2, String percentage3, String target1, String target2, String target3){
+
+        // check if the user splitted correctly (sum of percentage is 100%)
+        double p1 = Double.parseDouble(percentage1);
+        double p2 = Double.parseDouble(percentage2);
+        double p3 = 0.0;
+
+        if(percentage3 != null) {
+            p3 = Double.parseDouble(percentage3);
+        }
+
+        if((percentage3 == null) != (target3 == null))  throw new RuntimeException("if 3 percentages are used, there must be 3 target variables");
+
+        if(p1+ p2 + p3 != 1.0) throw new RuntimeException("sum of percentages must be 1");
+
+        String fromType = sym.getRecord(from, sc).getType();
+        String t1Type = sym.getRecord(target1, sc).getType();
+        String t2Type = sym.getRecord(target2, sc).getType();
+        String t3Type = null;
+
+        if(target3 != null) {
+         t3Type = sym.getRecord(target3, sc).getType();
+         if(!fromType.equals(t3Type))
+            throw new RuntimeException("target variables must have same type of source");
+        }
+
+        if(!fromType.equals(t1Type) || !fromType.equals(t2Type) ){
+            throw new RuntimeException("target variables must have same type as source");
+        }
+
+    }
 
 
 

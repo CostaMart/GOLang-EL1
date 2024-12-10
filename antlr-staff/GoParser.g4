@@ -143,7 +143,7 @@ varDecl
     ;
 
 varSpec
-    : (x = identifierList  ) (t = type_ (ASSIGN expressionList)? | ASSIGN expressionList) {}
+    : (x = identifierList  ) (t = type_ (ASSIGN expressionList)? | ASSIGN expressionList) {declareSemanticCheck($x.text, scopes);  sym.put($x.text, scopes);  sym.setType($x.text, scopes, $t.text); }
     ;
 
 block
@@ -575,5 +575,5 @@ reduceCSV
     ;
 
 splitCSV
-    : SPLIT IDENTIFIER (DECIMAL_LIT | FLOAT_LIT) COLON (DECIMAL_LIT | FLOAT_LIT) (COLON (DECIMAL_LIT | FLOAT_LIT))? IN IDENTIFIER COMMA IDENTIFIER (COMMA IDENTIFIER)?
+    : SPLIT from = IDENTIFIER percentage1=  FLOAT_LIT COLON percentage2 = FLOAT_LIT (COLON percentage3 = FLOAT_LIT)? IN target1 = IDENTIFIER COMMA target2 = IDENTIFIER (COMMA target3 = IDENTIFIER)? {splitSemanticCheckDeferred(scopes, $from.text, $percentage1.text, $percentage2.text, $percentage3.text, $target1.text, $target2.text, $target3.text);}
     ;
