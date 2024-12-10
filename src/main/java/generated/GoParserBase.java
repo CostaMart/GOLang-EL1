@@ -83,10 +83,8 @@ public abstract class GoParserBase extends Parser
      * @param sc the current scope stack
      * @param varName the name of the variable to check
      */
-    protected void loadCsvSemanticCheck(Stack<String> sc, String varName){
-        // TODO: non va bene, visto che gerRecord ritorna le info della variabile anche quando è ad un livello di scope superiore ma comunque nella
-        //  gerarchia di scope che si sta cercando fa eccezione anche quando una variabile è già dichiarata in uno scope superiore in gerarchia
-        if (sym.getRecord(varName, sc) != null) throw new RuntimeException("Variable '" + varName + "' already defined in this scope");
+    protected void loadCsvSemanticCheck(String varName,Stack<String> sc){
+        if (!sym.isInConflict(varName, sc)) throw new RuntimeException("Variable '" + varName + "' already defined in this scope");
     }
 
 

@@ -41,6 +41,43 @@ public class SymbolTable {
             t.put(lex, r);
     }
 
+    // check if variable is already declared in same scope
+    public boolean isInConflict(String lex, Stack<String> scopes){
+        try {
+
+            Stack<String> toRevert = (Stack<String>) scopes.clone();
+            Stack<String> working = new Stack<String>();
+
+            // revert for working top down
+            while (!(toRevert.isEmpty())) {
+                working.add(toRevert.pop());
+            }
+
+
+            Map<String, Record> t = table;
+
+
+            while (!(working.empty())) {
+                String s = working.pop();
+                t = t.get(s).table;
+
+            }
+
+            Record toReturn = null;
+            if (t.get(lex) != null) toReturn = t.get(lex);
+
+            return toReturn == null;
+
+
+        } catch (EmptyStackException e){
+            // change message to make it more suitable for this situation
+            throw new RuntimeException("'"+ lex + "' not declared in this scope");
+        }
+
+
+
+    }
+
     public void assing(String lex, Stack<String> scopes, Object value){
         Record r = getRecord(lex, scopes);
         r.setValue(value);

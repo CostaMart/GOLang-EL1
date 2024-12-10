@@ -553,8 +553,8 @@ eos
 
 
 
-loadCSV // TODO: semantic rules for this: e.g. variable must not be already defined
-    : LOAD string_ IDENTIFIER IN var = IDENTIFIER  {sym.put($IDENTIFIER(1).getText(), scopes); sym.setType($IDENTIFIER(1).getText(), scopes, "[]" + $IDENTIFIER(0).getText()); }
+loadCSV
+    : LOAD string_ IDENTIFIER IN var = IDENTIFIER  {loadCsvSemanticCheck($IDENTIFIER(1).getText(), scopes); sym.put($IDENTIFIER(1).getText(), scopes); sym.setType($IDENTIFIER(1).getText(), scopes, "[]" + $IDENTIFIER(0).getText()); }
     ;
 
 operator
