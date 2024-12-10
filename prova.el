@@ -8,19 +8,15 @@ import (
 func main() {
     load "test.csv" Person in y
 
-   for x := 0; x < 10; x++ {
-     load "test.csv" Person in y
-     load "test.csv" Person in y
-        fmt.Print(y)
-        }
+    var train []Person
+    var test []Person
+    var validate []Person
 
-    var x Person
-    y reduce func(cumulated, single *Person) (mario Person) {
-                    mario.Age = cumulated.Age + single.Age
-             		return
-             } in x
+    split y 0 : 1 : 0 in train,test,validate
 
-    fmt.Print(x)
+    fmt.Println(train)
+    fmt.Println(test)
+    fmt.Println(validate)
 }
 
 

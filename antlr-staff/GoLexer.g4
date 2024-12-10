@@ -50,6 +50,7 @@ ELAPPLY        : '<<-';
 REDUCE         : 'reduce';
 IN             : 'in';
 MEAN           : 'mean';
+SPLIT          : 'split';
 // Keywords
 
 BREAK       : 'break' -> mode(NLSEMI);

@@ -32,8 +32,8 @@ class GoLangELVisitor extends GoParserBaseVisitor<String> {
 
     // necessary to understand if its necessary to add dependencies
     static boolean IMPORTSPRESENT = false;
-    static boolean OSUSED, GOCSVUSED, FMTUSED = false;
-    static boolean OSPRESENT, GOCSVPRESENT, FMTPRESENT = false;
+    static boolean OSUSED, GOCSVUSED, FMTUSED, MATHUSED = false;
+    static boolean OSPRESENT, GOCSVPRESENT, FMTPRESENT, MATHPRESENT = false;
 
 
     @Override
@@ -79,6 +79,9 @@ class GoLangELVisitor extends GoParserBaseVisitor<String> {
 
         if(!GOCSVPRESENT && GOCSVUSED)
             imports = imports.concat("\n\"github.com/gocarina/gocsv\"");
+
+        if(!MATHPRESENT && MATHUSED)
+            imports = imports.concat("\n\"math/rand\"\n\"time\"");
 
         if (!IMPORTSPRESENT)
             imports = imports.concat(")");
@@ -136,6 +139,11 @@ class GoLangELVisitor extends GoParserBaseVisitor<String> {
         verità = imports.stream().anyMatch((i)-> i.getText().contains("os"));
         if(imports.stream().anyMatch((i)-> i.getText().contains("os"))){
             OSPRESENT = true;
+        }
+
+
+        if(imports.stream().anyMatch((i)-> i.getText().contains("math/rand"))){
+            MATHPRESENT = true;
         }
 
         importEnd = imports.getLast().getStop();
@@ -473,5 +481,102 @@ class GoLangELVisitor extends GoParserBaseVisitor<String> {
         rewriter.replace(ctx.start, ctx.stop, forOnStcut);
 
         return super.visitReduceCSV(ctx);
+    }
+
+
+    @Override
+    public String visitSplitCSV(GoParser.SplitCSVContext ctx) {
+        MATHUSED = true;
+        String rndm = Integer.toString(Math.abs(random.nextInt()));
+        String var = ctx.IDENTIFIER(0).getText();
+
+        String target1 = ctx.IDENTIFIER(1).getText();
+        String target2 = ctx.IDENTIFIER(2).getText();
+        String target3 = "";
+
+
+        if (ctx.IDENTIFIER(3) != null)
+            target3 = ctx.IDENTIFIER(3).getText();
+
+        String validate = null;
+        String train;
+        String test;
+        SymbolTable.Record variableType = symbolTable.getRecord(var);
+
+
+
+        // utilizzando decimali
+        if(ctx.DECIMAL_LIT(0) != null) {
+            train = ctx.DECIMAL_LIT(0).getText();
+            test = ctx.DECIMAL_LIT(1).getText();
+            if(ctx.DECIMAL_LIT(2) != null)
+                validate = ctx.DECIMAL_LIT(2).getText();
+        }else {
+            // utilizzando float
+            train = ctx.FLOAT_LIT(0).getText();
+            test = ctx.FLOAT_LIT(1).getText();
+            if (ctx.FLOAT_LIT(2) != null)
+                validate = ctx.FLOAT_LIT(2).getText();
+        }
+
+        // make a copy
+        String makeCopy = String.format("\ncopy%s := make(%s, len(%s))\n copy(copy%s, %s)\n", rndm, variableType.getType(), var, rndm, var);
+
+
+        // shuffle
+        String shuffle =String.format( """
+        
+
+        rand.Seed(time.Now().UnixNano())
+        rand.Shuffle(len(copy%s), func(i, j int) {
+            copy%s[i], copy%s[j] = copy%s[j], copy%s[i]
+        })""",rndm, rndm, rndm, rndm, rndm) ;
+
+        String determinIndexes = String.format("""
+                
+                	total%s := len(copy%s)
+                	trainEnd%s := int( %s * float64(total%s))
+                	valEnd%s := trainEnd%s + int(%s *float64(total%s))
+                """, rndm, rndm, rndm, train, rndm, rndm, rndm, test, rndm);
+
+        // split
+        String splitting = String.format("""
+                
+                trainSet%s := copy%s[:trainEnd%s]
+                validationSet%s := copy%s[trainEnd%s:valEnd%s]
+                testSet%s := copy%s[valEnd%s:]
+                """, rndm, rndm, rndm, rndm, rndm, rndm,rndm,rndm,rndm,rndm
+        );
+
+        String returnString = "";
+        // return
+        if(validate != null) {
+             returnString = String.format("""
+                    
+                    %s = trainSet%s
+                    %s = validationSet%s
+                    %s = testSet%s
+                    """, target1, rndm, target2, rndm, target3, rndm);
+        }
+        else {
+
+            returnString = String.format("""
+                    
+                    %s = trainSet%s
+                    validationSl%s := validationSet%s[:]
+                    testSetSl%s := testSet%s[:]
+                    %s = append(validationSl%s, testSetSl%s...)
+                    
+                    """, target1, rndm, rndm, rndm, rndm, rndm, target2, rndm, rndm);
+
+
+        }
+
+        String firm = "\n// generated from visitFilterCSV start--";
+        String closeFirm = "// ----------------------------------\n";
+
+        String fin = String.join(" ", firm, makeCopy, shuffle, determinIndexes, splitting, returnString, closeFirm);
+        rewriter.replace(ctx.start, ctx.stop, fin);
+        return super.visitSplitCSV(ctx);
     }
 }
