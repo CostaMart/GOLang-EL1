@@ -51,6 +51,8 @@ REDUCE         : 'reduce';
 IN             : 'in';
 MEAN           : 'mean';
 SPLIT          : 'split';
+TRAIN          : 'train-model';
+TEST           : 'test-model';
 // Keywords
 
 BREAK       : 'break' -> mode(NLSEMI);

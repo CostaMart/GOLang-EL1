@@ -61,20 +61,6 @@ public abstract class GoParserBase extends Parser
      */
     protected FunctionRecord createfunctionRecord(String params){return new FunctionRecord(params);}
 
-    /**
-     * Declares a variable with the given value and type, and adds it to the symbol table for the given scopes.
-     *
-     * @param val the variable value
-     * @param type the variable type
-     * @param scopes the stack of scopes where the variable is defined
-     */
-    protected void varDeclRoutine(String val, String type, Stack<String> scopes){
-        String[] vals = val.split(",");
-        for (String identifier : vals) {
-            sym.put(identifier, scopes);
-            sym.setType(identifier, scopes, type);
-        }
-    }
 
     /**
      * Performs a semantic check for a variable's existence and type consistency.
@@ -87,8 +73,14 @@ public abstract class GoParserBase extends Parser
         if (sym.isInConflict(varName, sc)) throw new RuntimeException("Variable '" + varName + "' already defined in this scope");
     }
 
-    protected void declareSemanticCheck(String varName, Stack<String> sc){
+    protected void declareSemanticCheck(String varName, Stack<String> sc, String type){
         if (sym.isInConflict(varName, sc)) throw new RuntimeException("Variable '" + varName + "' already defined in this scope");
+        String[] vals = varName.split(",");
+        for (String identifier : vals) {
+            sym.put(identifier, scopes);
+            sym.setType(identifier, scopes, type);
+        }
+
     }
 
 
@@ -105,10 +97,24 @@ public abstract class GoParserBase extends Parser
      */
     protected void mapCSVSematicCheck(Stack<String> sc, String varName, String functId, String funct, String target){
         String datasetType = sym.getRecord(varName, sc).getType();
-        String elementType = datasetType.replace("[", "").replace("]", "");
+        String elementType = datasetType;
+        if (datasetType.contains("Dataset[")) {
+            elementType = datasetType.replace("Dataset[", "").replace("]", "");
+            elementType = elementType.replace("[", "");
+        }
+        else{
+            Pattern p = Pattern.compile(".*(\\[.*]).*");
+            Matcher m = p.matcher(datasetType);
+            m.find();
+            elementType = elementType.replace(m.group(1), "");
+        }
+
+        Pattern pattern1 = Pattern.compile("\\[.*]");
+        Matcher matcher1 = pattern1.matcher(datasetType);
+
 
         //check if variable is a collection
-        if(!(datasetType.contains("[]"))) throw new RuntimeException("Variable '" + varName + "' has not a collection type");
+        if((!matcher1.find() && !datasetType.contains("Dataset["))) throw new RuntimeException("Variable '" + varName + "' has not a collection type");
 
         // if it is a lambda do this
         if(funct != null){
@@ -161,6 +167,7 @@ public abstract class GoParserBase extends Parser
     protected void mapCSVSemanticCheckDeferred(Stack<String> sc, String type, String functId,  String target){
         FunctionRecord fun = (FunctionRecord) sym.getRecord(functId, sc).getValue();
 
+
         for (String param : fun.getParams()) {
             if (!(param.contains("*" + type))) throw new IllegalArgumentException("function " + functId + " must accept a single parameter of type *" + type);
         }
@@ -188,12 +195,24 @@ public abstract class GoParserBase extends Parser
      */
     protected void reduceCSVSemanticCheck(Stack<String> sc, String varName, String functId, String funct, String target){
         String datasetType = sym.getRecord(varName, sc).getType();
-        String elementType = datasetType.replace("[", "").replace("]", "");
+        String elementType = datasetType;
+
+        if(datasetType.contains("Dataset[")) {
+            elementType = datasetType.replace("Dataset[", "").replace("]", "");
+        }
+        else{
+            Pattern p = Pattern.compile(".*(\\[.*]).*");
+            Matcher m = p.matcher(datasetType);
+            m.find();
+            elementType = elementType.replace(m.group(1), "");
+        }
+
+
 
         if(target == null) throw new RuntimeException("reduce statements requires a target variable");
 
         //check if variable is a collection
-        if(!(datasetType.contains("[]"))) throw new RuntimeException("Variable '" + varName + "' has not a collection type");
+        if(!(datasetType.contains("["))) throw new RuntimeException("Variable '" + varName + "' has not a collection type");
 
         // TODO: for now reduce cannot accept lambdas
         // if it is a lambda do this
@@ -206,7 +225,7 @@ public abstract class GoParserBase extends Parser
             // check if the lambda has the right parameters and if it as no return values
 
 
-            Pattern pattern = Pattern.compile("func\\s*\\(\\s*[a-zA-Z_][a-zA-Z0-9_]*\\s*,\\s*[a-zA-Z_][a-zA-Z0-9_]*\\s*\\*" + elementType+ "\\) \\s*(\\(\\s*[a-zA-Z_][a-zA-Z0-9_]*\\s* " + elementType+"\\)|" + elementType + ")\\s*\\{");
+            Pattern pattern = Pattern.compile("func\\s*\\(\\s*[a-zA-Z_][a-zA-Z0-9_]*\\s*,\\s*[a-zA-Z_][a-zA-Z0-9_]*\\s*\\*" + elementType+ "\\)\\s*(\\(\\s*[a-zA-Z_][a-zA-Z0-9_]*\\s*" + elementType+"\\)|" + elementType + ")\\s*\\{");
             Matcher matcher = pattern.matcher(funcHeader);
 
             boolean found = matcher.find();
@@ -296,6 +315,7 @@ public abstract class GoParserBase extends Parser
 
         if(target3 != null) {
          t3Type = sym.getRecord(target3, sc).getType();
+
          if(!fromType.equals(t3Type))
             throw new RuntimeException("target variables must have same type of source");
         }
@@ -306,8 +326,15 @@ public abstract class GoParserBase extends Parser
 
     }
 
+    protected void trainModelSemanticCheck(Stack<String> sc, String var, String dataset){
 
+        if (sym.isInConflict(var, sc)) throw new RuntimeException("variable already declared '" +  var + "' in this scope");
+        if (!sym.getRecord(dataset, sc).getType().contains("Dataset[")) throw new RuntimeException("'" + dataset +"' used for training must be a Golang-EL dataset (collection of struct representing data)");
 
+        sym.put(var, sc);
+        sym.setType(var,sc, "GEL-model");
+
+    }
 
 
 

@@ -3,6 +3,7 @@ package it.unisannio;
 
 import generated.GoParser;
 import generated.GoParserBaseVisitor;
+import org.antlr.v4.runtime.Token;
 import org.antlr.v4.runtime.TokenStreamRewriter;
 import org.antlr.v4.runtime.tree.TerminalNode;
 import org.apache.logging.log4j.LogManager;
@@ -14,6 +15,8 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 
 class GoLangELVisitor extends GoParserBaseVisitor<String> {
@@ -23,17 +26,17 @@ class GoLangELVisitor extends GoParserBaseVisitor<String> {
     public TokenStreamRewriter rewriter;
     static final Logger logger = LogManager.getLogger("visitor");
 
-    org.antlr.v4.runtime.Token main; // point first function of the file starts, used to create structs on top
-    org.antlr.v4.runtime.Token importEnd;
-    org.antlr.v4.runtime.Token packageDeclaration;
+    Token main; // point first function of the file starts, used to create structs on top
+    Token importEnd;
+    Token packageDeclaration;
 
     // keep track of scope during code analysis
     Stack<String> scopes = new Stack<>();
 
     // necessary to understand if its necessary to add dependencies
     static boolean IMPORTSPRESENT = false;
-    static boolean OSUSED, GOCSVUSED, FMTUSED, MATHUSED = false;
-    static boolean OSPRESENT, GOCSVPRESENT, FMTPRESENT, MATHPRESENT = false;
+    static boolean OSUSED, GOCSVUSED, FMTUSED, MATHUSED, BASEUSED, KNNUSED = false;
+    static boolean OSPRESENT, GOCSVPRESENT, FMTPRESENT, MATHPRESENT, BASEPRESENT, KNNPRESENT = false;
 
 
     @Override
@@ -64,6 +67,10 @@ class GoLangELVisitor extends GoParserBaseVisitor<String> {
                     \t"github.com/gocarina/gocsv"
                     \t"fmt"
                     \t"os"
+                    \t "time"
+                    \t "github.com/sjwhitworth/golearn/base"
+                    \t "github.com/sjwhitworth/golearn/knn"
+                    \t "github.com/rocketlaunchr/dataframe-go"
                     )""");
         }
         main = ctx.functionDecl(0).start;
@@ -83,8 +90,16 @@ class GoLangELVisitor extends GoParserBaseVisitor<String> {
         if(!MATHPRESENT && MATHUSED)
             imports = imports.concat("\n\"math/rand\"\n\"time\"");
 
+        if(!BASEPRESENT && BASEUSED)
+            imports = imports.concat("\n\"github.com/sjwhitworth/golearn/base\"");
+
+        if(!KNNPRESENT && KNNUSED)
+            imports = imports.concat("\n\"github.com/sjwhitworth/golearn/knn\"\n\"github.com/rocketlaunchr/dataframe-go\"");
+
         if (!IMPORTSPRESENT)
             imports = imports.concat(")");
+
+
 
         if (!IMPORTSPRESENT) rewriter.insertAfter(packageDeclaration, imports);
         else rewriter.insertAfter(importEnd, imports);
@@ -146,6 +161,16 @@ class GoLangELVisitor extends GoParserBaseVisitor<String> {
             MATHPRESENT = true;
         }
 
+        if(imports.stream().anyMatch((i)-> i.getText().contains("github.com/sjwhitworth/golearn/base"))){
+            BASEPRESENT = true;
+        }
+
+        if(imports.stream().anyMatch((i)-> i.getText().contains("github.com/sjwhitworth/golearn/knn"))){
+            KNNPRESENT = true;
+        }
+
+
+
         importEnd = imports.getLast().getStop();
         return super.visitImportDecl(ctx);
     }
@@ -187,11 +212,16 @@ class GoLangELVisitor extends GoParserBaseVisitor<String> {
 
                 String firstline = br.readLine();
                 String[] firstlineSplit = firstline.split(",");
+                String[] firstLineTypes = new String[firstlineSplit.length];
 
                 String toAdd = "";
                 for (int x = 0; x < intestazioneSplit.length; x++) {
-                    toAdd = toAdd.concat(intestazioneSplit[x] + " " + GoUtilities.getTGoType(firstlineSplit[x]) + "\n" );
+                    firstLineTypes[x] = GoUtilities.getTGoType(firstlineSplit[x]);
+                    toAdd = toAdd.concat(intestazioneSplit[x] + " " + firstLineTypes[x] + "\n" );
+
                 }
+
+
 
                 String struct = String.format("type %s struct {\n %s }\n", typeName, toAdd);
                 rewriter.insertBefore(main, struct);
@@ -201,7 +231,7 @@ class GoLangELVisitor extends GoParserBaseVisitor<String> {
                 HashMap<String, DatasetRecord> value = (HashMap<String, DatasetRecord>) r.getValue();
 
                 if(!(value.containsKey(typeName))){
-                    value.put(typeName, new DatasetRecord(intestazioneSplit));
+                    value.put(typeName, new DatasetRecord(intestazioneSplit, firstLineTypes));
                     r.setValue(value);
                     r.setType(typeName);
                 }
@@ -301,10 +331,11 @@ class GoLangELVisitor extends GoParserBaseVisitor<String> {
     @Override
     public String visitMapCSV(GoParser.MapCSVContext ctx) {
         // TODO: implement this
+
         String rndm = Integer.toString(Math.abs(random.nextInt()));
         String variable = ctx.IDENTIFIER(0).getText();
         String functionLit = null;
-        
+
         if (ctx.functionLit() != null)
             functionLit = ctx.functionLit().getText();
 
@@ -315,23 +346,22 @@ class GoLangELVisitor extends GoParserBaseVisitor<String> {
 
         // check if the target node is in second or third place
         TerminalNode targetNode;
-        if(functionLit != null){
+        if (functionLit != null) {
             targetNode = ctx.IDENTIFIER(1);
-        }
-        else {
+        } else {
             targetNode = ctx.IDENTIFIER(2);
         }
 
         String forOnStcut = "";
         // se viene passata la firma di una funzione già definita fai qusta
-        if(functionLit == null){
+        if (functionLit == null) {
             String signature = signatureNode.getText();
             // prepare execution
 
             forOnStcut = String.format("""
                     for i%s, _ := range %s {
                         %s(&%s[i%s])
-                        }""",rndm, variable, signature,variable, rndm);
+                        }""", rndm, variable, signature, variable, rndm);
 
 
             forOnStcut = String.join("\n", firm, forOnStcut, closeFirm);
@@ -342,7 +372,7 @@ class GoLangELVisitor extends GoParserBaseVisitor<String> {
         // se viene passata una lambda fai questo
         else {
             String codeBlock = ctx.functionLit().block().getText();
-            List<GoParser. ParameterDeclContext> codeParams = ctx.functionLit().signature().parameters().parameterDecl();
+            List<GoParser.ParameterDeclContext> codeParams = ctx.functionLit().signature().parameters().parameterDecl();
 
             // recupero nome delle variabili della funzione passata
             String paramVar = codeParams.getFirst().identifierList().getText();
@@ -357,12 +387,12 @@ class GoLangELVisitor extends GoParserBaseVisitor<String> {
 
             // prepare execution
 
-            String instanciateFunct = String.format("function%s := func (%s) %s\n", rndm,  param, codeBlock);
+            String instanciateFunct = String.format("function%s := func (%s) %s\n", rndm, param, codeBlock);
 
             forOnStcut = String.format("""
                     for i%s, _ := range %s {
                         function%s(&%s[i%s])
-                        }""",rndm, variable, rndm, variable, rndm);
+                        }""", rndm, variable, rndm, variable, rndm);
 
 
             forOnStcut = String.join("\n", instanciateFunct, forOnStcut, closeFirm);
@@ -370,20 +400,37 @@ class GoLangELVisitor extends GoParserBaseVisitor<String> {
         }
 
         // if targetNode is not null the mapping is not in place
-        String type = symbolTable.getRecord(variable, scopes).getType();
-        System.out.println("il tipooooo " + type);
 
         if (targetNode != null) {
+            String type = symbolTable.getRecord(variable, scopes).getType();
+            String elemType = type;
+
+            if (type.contains("Dataset[")){
+                elemType = type.replace("]", "").replace("Dataset[", "[]");
+            }
+            else {
+                Pattern pat = Pattern.compile(".*\\[(.*)]");
+                Matcher mat = pat.matcher(elemType);
+                boolean b = mat.find();
+                String group = mat.group(1);
+                elemType = elemType.replace(group, "");
+
+            }
             String doBefore = String.format(
                     """
                             \n x%s := make(%s, len(%s))
-                                copy( x%s, %s)
-                            """, rndm, type, variable, rndm, variable
+                                copy( x%s, %s[:])
+                            """, rndm, elemType, variable, rndm, variable
             );
 
+            if (type.contains("Dataset[")){
+                String moo =String.format("\n%s = make(%s, len(%s))\n", targetNode.getText(), elemType, variable);
+                doBefore = moo.concat(doBefore);
+            }
+
             String doAfter = String.format("""
-                           \n%s = %s
-                           %s = x%s """,targetNode.getText(), variable, variable, rndm);
+                           \ncopy(%s[:] ,%s[:])
+                           copy(%s[:],x%s)""",targetNode.getText(), variable, variable, rndm);
 
             forOnStcut = String.join("\n", doBefore, forOnStcut, doAfter);
         }
@@ -439,11 +486,13 @@ class GoLangELVisitor extends GoParserBaseVisitor<String> {
         else{
             String codeBlock = ctx.functionLit().getText();
             String type = symbolTable.getRecord(variable, scopes).getType();
-            type = type.replace("[","").replace("]","");
+            type = type.replace("Dataset[","").replace("]","");
             type = type.trim();
 
+            String retType = ctx.functionLit().signature().result().parameters().parameterDecl().getFirst().type_().getText();
+
             String returnPart = codeBlock.substring(codeBlock.indexOf(")"), codeBlock.indexOf("{"));
-            String returnPartnew = returnPart.replace(type, " "+ type);
+            String returnPartnew = returnPart.replace(retType, " "+retType );
             codeBlock = codeBlock.replace(returnPart, returnPartnew);
 
 
@@ -512,9 +561,16 @@ class GoLangELVisitor extends GoParserBaseVisitor<String> {
             if (ctx.FLOAT_LIT(2) != null)
                 validate = ctx.FLOAT_LIT(2).getText();
 
+        String regex = ".*\\[([a-zA-Z_][a-zA-Z0-9_]*)]";
+        Pattern pattern = Pattern.compile(regex);
+        Matcher matcher = pattern.matcher(variableType.getType());
+        String type = "";
+        if(matcher.find()){
+            type = matcher.group(1);
+        }
 
         // make a copy
-        String makeCopy = String.format("\ncopy%s := make(%s, len(%s))\n copy(copy%s, %s)\n", rndm, variableType.getType(), var, rndm, var);
+        String makeCopy = String.format("\ncopy%s := make(%s, len(%s))\n copy(copy%s, %s)\n", rndm, "[]" + type, var, rndm, var);
 
 
         // shuffle
@@ -566,11 +622,128 @@ class GoLangELVisitor extends GoParserBaseVisitor<String> {
 
         }
 
-        String firm = "\n// generated from visitFilterCSV start--";
+        String firm = "\n// generated from visitSplitCSV start--";
         String closeFirm = "// ----------------------------------\n";
 
         String fin = String.join(" ", firm, makeCopy, shuffle, determinIndexes, splitting, returnString, closeFirm);
         rewriter.replace(ctx.start, ctx.stop, fin);
         return super.visitSplitCSV(ctx);
+    }
+
+    @Override
+    public String visitTrainModel(GoParser.TrainModelContext ctx) {
+        KNNUSED = true;
+        BASEUSED = true;
+
+
+        String rndm = Integer.toString(Math.abs(random.nextInt()));
+        String var = ctx.IDENTIFIER(0).getText();
+
+        String dataset = ctx.IDENTIFIER(1).getText();
+
+        Map<String, DatasetRecord> datasetsMap = (Map<String, DatasetRecord>) symbolTable.getRecord("datasets").getValue();
+
+        String datasetType = symbolTable.getRecord(dataset, scopes).getType();
+
+        datasetType = datasetType.substring(datasetType.indexOf("[")+1, datasetType.indexOf("]"));
+
+
+        DatasetRecord datasetInfo = datasetsMap.get(datasetType);
+        String[] types = datasetInfo.getHeaderTypes();
+        String[] names = datasetInfo.getHeader();
+
+
+        // create columns
+        String addition = "";
+        String finalString = "";
+
+        for (int x = 0; x < types.length; x++) {
+            addition = switch (types[x]){
+                case "int" -> String.format("%s%s := dataframe.NewSeriesInt64(\"%s\", nil)", names[x], rndm, names[x]);
+                case "float64" -> String.format("%s%s := dataframe.NewSeriesFloat64(\"%s\", nil)", names[x], rndm, names[x]);
+                case "string", "bool" -> String.format("%s%s := dataframe.NewSeriesString(\"%s\", nil)", names[x], rndm, names[x]);
+                default -> throw new IllegalStateException("Unexpected value: " + types[x]);
+            };
+
+            finalString = finalString.concat("\n" + addition);
+
+        }
+
+        // create dataset
+        List<String> namesWithRndm = new ArrayList<String>();
+
+
+        for (String name : names) {
+            namesWithRndm.add(name+rndm);
+        }
+
+
+        String columns = String.join(",", namesWithRndm);
+        String dataDecl = String.format("df%s := dataframe.NewDataFrame(%s)", rndm, columns);
+
+
+        // populate dataset
+        String appending = "";
+        for(String s : names){
+            appending = appending.concat(String.format("\n %s%s.Append(element%s.%s)",s, rndm,rndm, s ));
+        }
+
+
+        String populate = String.format("""
+                for _, element%s := range %s {
+                    %s
+                
+                }""", rndm, dataset, appending);
+
+        // convert to instances
+        String conversion = String.format( "instances%s := base.ConvertDataFrameToInstances(df%s, 1)", rndm, rndm);
+
+
+        // create classifier
+        String classifier = String.format("cls%s := knn.NewKnnClassifier(\"euclidean\", \"linear\", 2);", rndm);
+
+        // train
+        String training = String.format("cls%s.Fit(instances%s)\n %s := cls%s", rndm, rndm, var, rndm);
+
+        String firm = "\n// generated from visitFilterCSV start--";
+        String closeFirm = "// ----------------------------------\n";
+
+
+        String returnString = String.join("\n",firm, finalString, dataDecl, populate, conversion, classifier, training, closeFirm);
+
+        rewriter.replace(ctx.start, ctx.stop, returnString  );
+        return super.visitTrainModel(ctx);
+    }
+
+
+    @Override
+    public String visitVarDecl(GoParser.VarDeclContext ctx) {
+
+
+        String text  = "";
+        text = ctx.getText();
+        if (text.contains("Dataset[")) {
+            String regex = ".*\\[([a-zA-Z_][a-zA-Z0-9_]*)]";
+            Pattern pattern = Pattern.compile(regex);
+            Matcher matcher = pattern.matcher(text);
+            String type = "";
+            if (matcher.find()) {
+                type = matcher.group(1);
+            }
+
+            text = text.replace("Dataset[" + type + "]", " []" + type);
+            text = text.replace("var", "var ");
+            rewriter.replace(ctx.start, ctx.stop, text);
+
+
+        }
+        return super.visitVarDecl(ctx);
+    }
+
+    @Override
+    public String visitTestModel(GoParser.TestModelContext ctx) {
+
+
+        return super.visitTestModel(ctx);
     }
 }

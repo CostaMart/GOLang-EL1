@@ -143,7 +143,7 @@ varDecl
     ;
 
 varSpec
-    : (x = identifierList  ) (t = type_ (ASSIGN expressionList)? | ASSIGN expressionList) {declareSemanticCheck($x.text, scopes);  sym.put($x.text, scopes);  sym.setType($x.text, scopes, $t.text); }
+    : (x = identifierList  ) (t = type_ (ASSIGN expressionList)? | ASSIGN expressionList) {declareSemanticCheck($x.text, scopes, $t.text);}
     ;
 
 block
@@ -176,6 +176,7 @@ statement
     | mapCSV
     | reduceCSV
     | splitCSV
+    | trainModel
 
     ;
 
@@ -555,7 +556,7 @@ eos
 
 
 loadCSV
-    : LOAD string_ IDENTIFIER IN var = IDENTIFIER  {loadCsvSemanticCheck($IDENTIFIER(1).getText(), scopes); sym.put($IDENTIFIER(1).getText(), scopes); sym.setType($IDENTIFIER(1).getText(), scopes, "[]" + $IDENTIFIER(0).getText()); }
+    : LOAD string_ IDENTIFIER IN var = IDENTIFIER  {loadCsvSemanticCheck($IDENTIFIER(1).getText(), scopes); sym.put($IDENTIFIER(1).getText(), scopes); sym.setType($IDENTIFIER(1).getText(), scopes, "Dataset[" + $IDENTIFIER(0).getText() + "]"); }
     ;
 
 operator
@@ -576,4 +577,12 @@ reduceCSV
 
 splitCSV
     : SPLIT from = IDENTIFIER percentage1=  FLOAT_LIT COLON percentage2 = FLOAT_LIT (COLON percentage3 = FLOAT_LIT)? IN target1 = IDENTIFIER COMMA target2 = IDENTIFIER (COMMA target3 = IDENTIFIER)? {splitSemanticCheckDeferred(scopes, $from.text, $percentage1.text, $percentage2.text, $percentage3.text, $target1.text, $target2.text, $target3.text);}
+    ;
+
+trainModel
+    : TRAIN var = IDENTIFIER RECEIVE dataset = IDENTIFIER   {trainModelSemanticCheck(scopes, $var.text, $dataset.text);}
+    ;
+
+testModel
+    : TEST IDENTIFIER RECEIVE IDENTIFIER
     ;

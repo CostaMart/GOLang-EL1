@@ -6,24 +6,18 @@ import (
 )
 
 func main() {
+
     load "test.csv" Person in y
 
-    var train []Person
-    var test []Person
-    var validate []Person
+    var train Dataset[Person]
+    var test Dataset[Person]
 
+    split y 1.0 : 0.0 in train, test
+    train-model model <- train
 
-    split y 0.0 : 1.0 : 0.0 in train,test, validate
-
-    fmt.Println(train)
     fmt.Println(test)
-    fmt.Println(validate)
-}
+    fmt.Println(train)
+    fmt.Println(model)
+    fmt.Println("mario")
 
-
-
-
-func sum(cumulated, single *Person) (mario Person) {
-	mario.Age = cumulated.Age + single.Age
-		return
 }
