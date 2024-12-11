@@ -14,6 +14,8 @@ func main() {
 
     split y 1.0 : 0.0 in train, test
     train-model model <- train
+    test-model model <- train
+
 
     fmt.Println(test)
     fmt.Println(train)

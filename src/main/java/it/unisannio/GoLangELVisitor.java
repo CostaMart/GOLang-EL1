@@ -652,6 +652,7 @@ class GoLangELVisitor extends GoParserBaseVisitor<String> {
         String[] types = datasetInfo.getHeaderTypes();
         String[] names = datasetInfo.getHeader();
 
+        int toPredict = types.length - 1;
 
         // create columns
         String addition = "";
@@ -696,7 +697,7 @@ class GoLangELVisitor extends GoParserBaseVisitor<String> {
                 }""", rndm, dataset, appending);
 
         // convert to instances
-        String conversion = String.format( "instances%s := base.ConvertDataFrameToInstances(df%s, 1)", rndm, rndm);
+        String conversion = String.format( "instances%s := base.ConvertDataFrameToInstances(df%s, %d)", rndm, rndm, toPredict);
 
 
         // create classifier
@@ -705,11 +706,11 @@ class GoLangELVisitor extends GoParserBaseVisitor<String> {
         // train
         String training = String.format("cls%s.Fit(instances%s)\n %s := cls%s", rndm, rndm, var, rndm);
 
-        String firm = "\n// generated from visitFilterCSV start--";
+        String firm = "\n// generated from visitTrainModel start--";
         String closeFirm = "// ----------------------------------\n";
 
 
-        String returnString = String.join("\n",firm, finalString, dataDecl, populate, conversion, classifier, training, closeFirm);
+        String returnString = String.join("\n",firm, finalString,  populate, dataDecl, conversion, classifier, training, closeFirm);
 
         rewriter.replace(ctx.start, ctx.stop, returnString  );
         return super.visitTrainModel(ctx);
@@ -718,8 +719,6 @@ class GoLangELVisitor extends GoParserBaseVisitor<String> {
 
     @Override
     public String visitVarDecl(GoParser.VarDeclContext ctx) {
-
-
         String text  = "";
         text = ctx.getText();
         if (text.contains("Dataset[")) {
@@ -742,6 +741,81 @@ class GoLangELVisitor extends GoParserBaseVisitor<String> {
 
     @Override
     public String visitTestModel(GoParser.TestModelContext ctx) {
+
+        String rndm = Integer.toString(Math.abs(random.nextInt()));
+        String var = ctx.IDENTIFIER(0).getText();
+
+        String dataset = ctx.IDENTIFIER(1).getText();
+
+        Map<String, DatasetRecord> datasetsMap = (Map<String, DatasetRecord>) symbolTable.getRecord("datasets").getValue();
+
+        String datasetType = symbolTable.getRecord(dataset, scopes).getType();
+
+        datasetType = datasetType.substring(datasetType.indexOf("[")+1, datasetType.indexOf("]"));
+
+
+        DatasetRecord datasetInfo = datasetsMap.get(datasetType);
+        String[] types = datasetInfo.getHeaderTypes();
+        String[] names = datasetInfo.getHeader();
+
+        int toPredict = types.length - 1;
+
+        // create columns
+        String addition = "";
+        String finalString = "";
+
+        for (int x = 0; x < types.length; x++) {
+            addition = switch (types[x]){
+                case "int" -> String.format("%s%s := dataframe.NewSeriesInt64(\"%s\", nil)", names[x], rndm, names[x]);
+                case "float64" -> String.format("%s%s := dataframe.NewSeriesFloat64(\"%s\", nil)", names[x], rndm, names[x]);
+                case "string", "bool" -> String.format("%s%s := dataframe.NewSeriesString(\"%s\", nil)", names[x], rndm, names[x]);
+                default -> throw new IllegalStateException("Unexpected value: " + types[x]);
+            };
+
+            finalString = finalString.concat("\n" + addition);
+
+        }
+
+        // create dataset
+        List<String> namesWithRndm = new ArrayList<String>();
+
+
+        for (String name : names) {
+            namesWithRndm.add(name+rndm);
+        }
+
+
+        String columns = String.join(",", namesWithRndm);
+        String dataDecl = String.format("df%s := dataframe.NewDataFrame(%s)", rndm, columns);
+
+
+        // populate dataset
+        String appending = "";
+        for(String s : names){
+            appending = appending.concat(String.format("\n %s%s.Append(element%s.%s)",s, rndm,rndm, s ));
+        }
+
+
+        String populate = String.format("""
+                for _, element%s := range %s {
+                    %s
+                
+                }""", rndm, dataset, appending);
+
+        // convert to instances
+        String conversion = String.format( "instances%s := base.ConvertDataFrameToInstances(df%s, %d)", rndm, rndm, toPredict);
+
+
+        String infer = String.format("%s.Predict(instances%s)", var, rndm);
+
+
+        String firm = "\n// generated from visitTestModel start--";
+        String closeFirm = "// ----------------------------------\n";
+
+
+        String returnString = String.join("\n",firm, finalString,  populate, dataDecl, conversion, infer, closeFirm);
+
+        rewriter.replace(ctx.start, ctx.stop, returnString);
 
 
         return super.visitTestModel(ctx);

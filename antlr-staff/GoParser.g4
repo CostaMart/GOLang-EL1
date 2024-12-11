@@ -177,6 +177,7 @@ statement
     | reduceCSV
     | splitCSV
     | trainModel
+    | testModel
 
     ;
 
