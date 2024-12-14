@@ -590,7 +590,7 @@ config_train
     ;
 
 testModel
-    : TEST IDENTIFIER RECEIVE IDENTIFIER IN data = IDENTIFIER      {testModelSemanticCheck($data.text, scopes);}
+    : TEST model = IDENTIFIER RECEIVE dataset = IDENTIFIER IN data = IDENTIFIER      {testModelSemanticCheck($data.text, scopes, $model.text, $dataset.text);}
     ;
 
 evaluation

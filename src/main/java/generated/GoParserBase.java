@@ -352,9 +352,24 @@ public abstract class GoParserBase extends Parser
         }
     }
 
-    protected void testModelSemanticCheck(String var, Stack<String> scopes){
+    protected void testModelSemanticCheck(String var, Stack<String> scopes, String model, String dataset ){
+
+        if(sym.isInConflict(var, scopes)) throw new RuntimeException("variable already declared '" +  var + "' in this scope");
         sym.put(var, scopes);
         sym.setType(var, scopes, "GEL-prediction");
+
+        SymbolTable.Record r = sym.getRecord(model,scopes);
+        if (!(r.getType().equals("GEL-model"))){
+                throw new RuntimeException("model '" + model + "' is not a GEL-Model");
+
+        }
+
+        SymbolTable.Record r1 = sym.getRecord(model,scopes);
+        if (r1.getType().contains("Dataset[")){
+            throw new RuntimeException("model '" + model + "' is not a Dataset");
+
+        }
+
     }
 
     /**
