@@ -52,7 +52,18 @@ IN             : 'in';
 MEAN           : 'mean';
 SPLIT          : 'split';
 TRAIN          : 'train-model';
+EVAL           : 'evaluate-model';
+
+// token relativi ai parametri della regola train
+TRAIN_PARAMS   : 'type' | 'distance' | 'weigth' | 'k';
+
+// token relativi ai parametri della regola test
+TEST_PARAMS   : 'PRECISION' | 'RECALL' | 'F1' | 'CONFUSION';
+
+//---------------------------------------------------
+
 TEST           : 'test-model';
+
 // Keywords
 
 BREAK       : 'break' -> mode(NLSEMI);

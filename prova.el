@@ -12,14 +12,17 @@ func main() {
     var train Dataset[Person]
     var test Dataset[Person]
 
-    split y 1.0 : 0.0 in train, test
+    split y 0.5 : 0.5 in train, test
+
     train-model model <- train
-    test-model model <- train
+
+    test-model model <- test in x
+
+    evaluate-model model <- x | PRECISION | RECALL
+
+    fmt.Print(precision)
+    fmt.Print(recall)
 
 
-    fmt.Println(test)
-    fmt.Println(train)
-    fmt.Println(model)
-    fmt.Println("mario")
 
 }

@@ -178,7 +178,7 @@ statement
     | splitCSV
     | trainModel
     | testModel
-
+    | evaluation
     ;
 
 simpleStmt
@@ -581,9 +581,23 @@ splitCSV
     ;
 
 trainModel
-    : TRAIN var = IDENTIFIER RECEIVE dataset = IDENTIFIER   {trainModelSemanticCheck(scopes, $var.text, $dataset.text);}
+    : TRAIN var = IDENTIFIER RECEIVE dataset = IDENTIFIER (OR config_train)? {trainModelSemanticCheck(scopes, $var.text, $dataset.text);}
+    ;
+
+config_train
+    :  TRAIN_PARAMS COLON string_
+    | config_train OR TRAIN_PARAMS COLON string_
     ;
 
 testModel
-    : TEST IDENTIFIER RECEIVE IDENTIFIER
+    : TEST IDENTIFIER RECEIVE IDENTIFIER IN data = IDENTIFIER      {testModelSemanticCheck($data.text, scopes);}
+    ;
+
+evaluation
+    : EVAL IDENTIFIER RECEIVE IDENTIFIER OR config_test
+    ;
+
+config_test
+    :  TEST_PARAMS
+    |  config_test OR TEST_PARAMS
     ;

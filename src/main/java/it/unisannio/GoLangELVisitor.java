@@ -35,9 +35,10 @@ class GoLangELVisitor extends GoParserBaseVisitor<String> {
 
     // necessary to understand if its necessary to add dependencies
     static boolean IMPORTSPRESENT = false;
-    static boolean OSUSED, GOCSVUSED, FMTUSED, MATHUSED, BASEUSED, KNNUSED = false;
-    static boolean OSPRESENT, GOCSVPRESENT, FMTPRESENT, MATHPRESENT, BASEPRESENT, KNNPRESENT = false;
+    static boolean OSUSED, GOCSVUSED, FMTUSED, MATHUSED, BASEUSED, KNNUSED, STRCNVUSED, EVALUSED = false;
+    static boolean OSPRESENT, GOCSVPRESENT, FMTPRESENT, MATHPRESENT, BASEPRESENT, KNNPRESENT, STRCNVPRESENT, EVALPRESENT = false;
 
+    Map<String, String> predictedOn = new HashMap<>();
 
     @Override
     public String visitPackageClause(GoParser.PackageClauseContext ctx) {
@@ -71,8 +72,10 @@ class GoLangELVisitor extends GoParserBaseVisitor<String> {
                     \t "github.com/sjwhitworth/golearn/base"
                     \t "github.com/sjwhitworth/golearn/knn"
                     \t "github.com/rocketlaunchr/dataframe-go"
+                    \t "strconv
                     )""");
         }
+
         main = ctx.functionDecl(0).start;
         String value = super.visitSourceFile(ctx);
         String imports = "";
@@ -95,6 +98,12 @@ class GoLangELVisitor extends GoParserBaseVisitor<String> {
 
         if(!KNNPRESENT && KNNUSED)
             imports = imports.concat("\n\"github.com/sjwhitworth/golearn/knn\"\n\"github.com/rocketlaunchr/dataframe-go\"");
+
+        if(!STRCNVPRESENT && STRCNVUSED)
+            imports = imports.concat("\n\"strconv\"");
+
+        if(EVALUSED && !EVALPRESENT)
+            imports = imports.concat("\n\"github.com/sjwhitworth/golearn/evaluation\"");
 
         if (!IMPORTSPRESENT)
             imports = imports.concat(")");
@@ -168,6 +177,17 @@ class GoLangELVisitor extends GoParserBaseVisitor<String> {
         if(imports.stream().anyMatch((i)-> i.getText().contains("github.com/sjwhitworth/golearn/knn"))){
             KNNPRESENT = true;
         }
+
+        if(imports.stream().anyMatch((i)-> i.getText().contains("strconv"))){
+            STRCNVPRESENT = true;
+        }
+
+
+        if(imports.stream().anyMatch((i)-> i.getText().contains("github.com/sjwhitworth/golearn/evaluation"))){
+            EVALPRESENT = true;
+        }
+
+
 
 
 
@@ -648,6 +668,9 @@ class GoLangELVisitor extends GoParserBaseVisitor<String> {
         datasetType = datasetType.substring(datasetType.indexOf("[")+1, datasetType.indexOf("]"));
 
 
+        // recupera i parametri
+        String trainParams = visitConfig_train(ctx.config_train());
+
         DatasetRecord datasetInfo = datasetsMap.get(datasetType);
         String[] types = datasetInfo.getHeaderTypes();
         String[] names = datasetInfo.getHeader();
@@ -699,9 +722,30 @@ class GoLangELVisitor extends GoParserBaseVisitor<String> {
         // convert to instances
         String conversion = String.format( "instances%s := base.ConvertDataFrameToInstances(df%s, %d)", rndm, rndm, toPredict);
 
+        String modelType = "euclidean";
+        Pattern pat = Pattern.compile(".*\\s*type:\\s*\"([a-zA-Z_][a-zA-Z0-9_]*)\".*");
+        Matcher mat = pat.matcher(trainParams);
+        if(mat.find())
+            modelType = mat.group(1);
+
+        mat.reset();
+
+        String distance = "linear";
+        pat = Pattern.compile(".*\\s*distance:\\s*\"([a-zA-Z_][a-zA-Z0-9_]*)\".*");
+        mat = pat.matcher(trainParams);
+        if(mat.find())
+            distance = mat.group(1);
+
+        mat.reset();
+
+        String k = "2";
+        pat = Pattern.compile(".*\\s*k:\\s*\"([0-9]*)\".*");
+        mat = pat.matcher(trainParams);
+        if(mat.find())
+            k = mat.group(1);
 
         // create classifier
-        String classifier = String.format("cls%s := knn.NewKnnClassifier(\"euclidean\", \"linear\", 2);", rndm);
+        String classifier = String.format("cls%s := knn.NewKnnClassifier(\"%s\", \"%s\", %d);", rndm, modelType, distance, Integer.parseInt(k));
 
         // train
         String training = String.format("cls%s.Fit(instances%s)\n %s := cls%s", rndm, rndm, var, rndm);
@@ -741,6 +785,7 @@ class GoLangELVisitor extends GoParserBaseVisitor<String> {
 
     @Override
     public String visitTestModel(GoParser.TestModelContext ctx) {
+        STRCNVUSED = true;
 
         String rndm = Integer.toString(Math.abs(random.nextInt()));
         String var = ctx.IDENTIFIER(0).getText();
@@ -803,21 +848,178 @@ class GoLangELVisitor extends GoParserBaseVisitor<String> {
                 }""", rndm, dataset, appending);
 
         // convert to instances
-        String conversion = String.format( "instances%s := base.ConvertDataFrameToInstances(df%s, %d)", rndm, rndm, toPredict);
+        String conversion = String.format( "instances%s := ConvertToNewInstances(df%s, %s,1)", rndm, rndm, var);
 
+        String second = ctx.IDENTIFIER(2).getText();
+        String infer = String.format("%s, _ := %s.Predict(instances%s)",second, var, rndm);
 
-        String infer = String.format("%s.Predict(instances%s)", var, rndm);
+        predictedOn.put(second, "instances"+rndm);
 
 
         String firm = "\n// generated from visitTestModel start--";
         String closeFirm = "// ----------------------------------\n";
 
 
+        String convertFunc = """
+                func ConvertToNewInstances(df *dataframe.DataFrame, classifier *knn.KNNClassifier, classAttributeIndex int) base.FixedDataGrid {
+
+	// Creating Attributes based on Dataframe
+	class := *classifier
+	instance := class.TrainingData
+	// Creating Attributes based on Dataframe
+	names := df.Names()
+	attrs := instance.AllAttributes()
+	var corr []int
+
+	for _, at := range attrs {
+
+		for j, at2 := range names {
+			if at.GetName() == at2 {
+				corr = append(corr, j)
+			}
+		}
+	}
+
+	newInst := base.NewStructuralCopy(instance)
+	newInstCpy := base.NewStructuralCopy(instance)
+
+	// Add the attributes
+	newSpecs := make([]base.AttributeSpec, len(attrs))
+	for i, a := range newInst.AllAttributes() {
+		newSpecs[i] = newInstCpy.AddAttribute(a)
+	}
+
+	// Allocate space
+	nRows := df.NRows()
+	newInst.Extend(df.NRows())
+
+	// Write the data based on DataType
+	for i := 0; i < nRows; i++ {
+		for j := 0; j < len(names); j++ {
+			value := corr[j]
+			col := df.Series[value]
+
+			var val string
+			switch v := col.Value(i).(type) {
+			case string:
+				val = v
+			case int64:
+				val = strconv.FormatInt(v, 10)
+			case float64:
+				val = fmt.Sprintf("%f", v)
+			case float32:
+				val = fmt.Sprintf("%f", v)
+			}
+
+			newInst.Set(newSpecs[j], i-1, newSpecs[j].GetAttribute().GetSysValFromString(val))
+		}
+	}
+
+	return newInst
+}
+                """;
+
         String returnString = String.join("\n",firm, finalString,  populate, dataDecl, conversion, infer, closeFirm);
 
         rewriter.replace(ctx.start, ctx.stop, returnString);
-
+        rewriter.insertBefore(main, convertFunc);
 
         return super.visitTestModel(ctx);
+    }
+
+    @Override
+    public String visitConfig_train(GoParser.Config_trainContext ctx) {
+
+        // recupera ricorsivamente tutti le coppie parametro valore
+        if (ctx != null) {
+            String param = ctx.TRAIN_PARAMS().getText();
+            String value = ctx.string_().getText();
+            param = param.concat(":" + value);
+            String other = null;
+
+            if (ctx.config_train() != null)
+                other = visitConfig_train(ctx.config_train());
+
+            if (other != null)
+                param = param.concat(" - " + other);
+
+            return param;
+        }else return "";
+    }
+
+    @Override
+    public String visitEvaluation(GoParser.EvaluationContext ctx) {
+        EVALUSED = true;
+
+        String rndm = Integer.toString(Math.abs(random.nextInt()));
+
+        String var = ctx.IDENTIFIER(0).getText();
+        String dataset = ctx.IDENTIFIER(1).getText();
+
+        String conf = visitConfig_test(ctx.config_test());
+
+        Map<String, DatasetRecord> datasetsMap = (Map<String, DatasetRecord>) symbolTable.getRecord("datasets").getValue();
+
+        String datasetType = symbolTable.getRecord(dataset, scopes).getType();
+
+
+
+        // create columns
+        String addition = "";
+        String finalString = "";
+
+
+        String confusion = String.format("c%s, _ := evaluation.GetConfusionMatrix(%s, %s)", rndm, dataset, predictedOn.get(dataset));
+
+        String evaluation = null;
+        String evaluationPart = "";
+        String decl = "var ";
+        if(ctx.config_test() != null) {
+            evaluation = visitConfig_test(ctx.config_test());
+            if (evaluation.contains("PRECISION")) {
+                decl = decl.concat("precision");
+                evaluationPart = String.format("\nprecision = evaluation.GetPrecision(k%s, c%s)", rndm, rndm);
+            }
+            if (evaluation.contains("RECALL")) {
+                decl = decl.concat(", recall");
+                evaluationPart = evaluationPart.concat("\n" + String.format("recall = evaluation.GetRecall(k%s, c%s)", rndm, rndm));
+            }
+            if (evaluation.contains("PRECISION") && evaluation.contains("RECALL") && evaluation.contains("F1")){
+                decl = decl.concat(",f1");
+                evaluationPart = evaluationPart.concat("\n" + String.format("f1 = evaluation.GetF1Score(k%s, c%s)", rndm, rndm));
+            }
+        }
+
+        decl = decl.concat(" float64");
+
+        String cycle = String.format("for k%s := range c%s { %s \n}", rndm, rndm, evaluationPart);
+
+        cycle = decl.concat("\n" + cycle);
+
+
+        String firm = "\n// generated from visitEvaluate start--";
+        String closeFirm = "// ----------------------------------\n";
+
+        String returnString = String.join("\n",firm, confusion, cycle, closeFirm);
+
+        rewriter.replace(ctx.start, ctx.stop, returnString);
+        return super.visitEvaluation(ctx);
+    }
+
+    @Override
+    public String visitConfig_test(GoParser.Config_testContext ctx) {
+        // recupera ricorsivamente tutti le coppie parametro valore
+        if (ctx != null) {
+            String param = ctx.TEST_PARAMS().getText();
+            String other = null;
+
+            if (ctx.config_test() != null)
+                other = visitConfig_test(ctx.config_test());
+
+            if (other != null)
+                param = param.concat(" - " + other);
+
+            return param;
+        }else return "";
     }
 }

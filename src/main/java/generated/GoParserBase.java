@@ -336,8 +336,6 @@ public abstract class GoParserBase extends Parser
 
     }
 
-
-
     /**
      * Executes all deferred semantic checks that were added to the stack during parsing.
      * This method is called at the end of the parsing process to finalize the semantic checks.
@@ -354,7 +352,10 @@ public abstract class GoParserBase extends Parser
         }
     }
 
-
+    protected void testModelSemanticCheck(String var, Stack<String> scopes){
+        sym.put(var, scopes);
+        sym.setType(var, scopes, "GEL-prediction");
+    }
 
     /**
      * A helper class used to store a method and its associated arguments for deferred execution.
