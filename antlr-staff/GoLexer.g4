@@ -51,13 +51,14 @@ REDUCE         : 'reduce';
 IN             : 'in';
 MEAN           : 'mean';
 SPLIT          : 'split';
-CLASSIFIER     : 'classify';
-CLUSTERIZER    : 'clusterize';
+TRAIN          : 'train';
+CLASSIFIER     : 'classifier';
+CLUSTER        : 'cluster';
 EVAL           : 'evaluate-model';
 
 // token relativi ai parametri della regola train
-TRAIN_PARAMS   : 'type' | 'distance' | 'weigth' | 'k';
-
+CLASSIFIER_PARAMS   : 'type' | 'distance' | 'weigth' | 'k';
+CLUSTERING_PARAMS   : 'coordinatex' | 'coordinatey' | 'partitions' ;
 // token relativi ai parametri della regola test
 TEST_PARAMS   : 'PRECISION' | 'RECALL' | 'F1' | 'CONFUSION';
 

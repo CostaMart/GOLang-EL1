@@ -407,5 +407,15 @@ public abstract class GoParserBase extends Parser
         }
     }
 
+    public void filterSemanticCheck(Stack<String> sc, String var, String var1, String var2){
+        if(var1 != null && !sym.isInConflict(var1,sc)){
+            sym.put(var1,sc);
+            sym.setType(var1, sc, sym.getRecord(var,sc ).getType());
+        }
 
+        if(var2 != null && !sym.isInConflict(var2,sc)){
+            sym.put(var2,sc);
+            sym.setType(var2, sc, sym.getRecord(var,sc ).getType());
+        }
+    }
 }

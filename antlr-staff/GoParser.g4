@@ -566,10 +566,15 @@ operator
  ;
 
 filter_get
-    : IDENTIFIER  PRINTER (filterCSV | get_column)
+    : IDENTIFIER  PRINTER (val1 = filterCSV | val2 = get_column) {filterSemanticCheck(scopes, $IDENTIFIER.text, $val1.val, $val2.text);}
     ;
-filterCSV
-    : (expression operator expression) (IN IDENTIFIER)?
+
+filterCSV returns [String val]
+    : (expression operator expression) IN IDENTIFIER {$val = $IDENTIFIER.text;}
+    ;
+
+get_column
+    : DECIMAL_LIT? COLON DECIMAL_LIT? IN IDENTIFIER
     ;
 
 mapCSV
@@ -585,16 +590,29 @@ splitCSV
     ;
 
 trainModel
-    : (CLASSIFIER | CLUSTERIZER)  var = IDENTIFIER RECEIVE dataset = IDENTIFIER (OR config_train)? {trainModelSemanticCheck(scopes, $var.text, $dataset.text);}
+    : TRAIN  var = IDENTIFIER  RECEIVE dataset = IDENTIFIER (train_classifier | train_clustering) {trainModelSemanticCheck(scopes, $var.text, $dataset.text);}
     ;
 
-config_train
-    :  TRAIN_PARAMS COLON string_
-    | config_train OR TRAIN_PARAMS COLON string_
+train_classifier
+    : CLASSIFIER  (OR config_classifier)?
+    ;
+
+config_classifier
+    :  CLASSIFIER_PARAMS COLON string_
+    | config_classifier OR CLASSIFIER_PARAMS COLON string_
+    ;
+
+train_clustering
+    :   CLUSTER (OR config_cluster)?
+    ;
+
+config_cluster
+    :  CLUSTERING_PARAMS COLON string_
+    | config_cluster OR CLUSTERING_PARAMS COLON string_
     ;
 
 testModel
-    : TEST model = IDENTIFIER RECEIVE dataset = IDENTIFIER IN data = IDENTIFIER      {testModelSemanticCheck($data.text, scopes, $model.text, $dataset.text);}
+    : TEST model = IDENTIFIER RECEIVE dataset = IDENTIFIER IN data = IDENTIFIER  {testModelSemanticCheck($data.text, scopes, $model.text, $dataset.text);}
     ;
 
 evaluation
@@ -606,6 +624,4 @@ config_test
     |  config_test OR TEST_PARAMS
     ;
 
-get_column
-    : DECIMAL_LIT? COLON DECIMAL_LIT? IN IDENTIFIER
-    ;
+

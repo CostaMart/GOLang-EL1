@@ -35,8 +35,8 @@ class GoLangELVisitor extends GoParserBaseVisitor<String> {
 
     // necessary to understand if its necessary to add dependencies
     static boolean IMPORTSPRESENT = false;
-    static boolean OSUSED, GOCSVUSED, FMTUSED, MATHUSED, BASEUSED, KNNUSED, STRCNVUSED, EVALUSED = false;
-    static boolean OSPRESENT, GOCSVPRESENT, FMTPRESENT, MATHPRESENT, BASEPRESENT, KNNPRESENT, STRCNVPRESENT, EVALPRESENT = false;
+    static boolean OSUSED, GOCSVUSED, FMTUSED, MATHUSED, BASEUSED, KNNUSED, STRCNVUSED, EVALUSED, KMEANSUSED = false;
+    static boolean OSPRESENT, GOCSVPRESENT, FMTPRESENT, MATHPRESENT, BASEPRESENT, KNNPRESENT, STRCNVPRESENT, EVALPRESENT, KMEANSPRESENT = false;
 
     Map<String, String> predictedOn = new HashMap<>();
 
@@ -65,6 +65,8 @@ class GoLangELVisitor extends GoParserBaseVisitor<String> {
                     
                     
                      import (
+                     \t"github.com/muesli/kmeans"
+                     	\t"github.com/muesli/clusters"
                     \t"github.com/gocarina/gocsv"
                     \t"fmt"
                     \t"os"
@@ -104,6 +106,9 @@ class GoLangELVisitor extends GoParserBaseVisitor<String> {
 
         if(EVALUSED && !EVALPRESENT)
             imports = imports.concat("\n\"github.com/sjwhitworth/golearn/evaluation\"");
+
+        if(!KMEANSPRESENT && KMEANSUSED)
+            imports = imports.concat("\n\"github.com/muesli/kmeans\"\n\"github.com/muesli/clusters\"");
 
         if (!IMPORTSPRESENT)
             imports = imports.concat(")");
@@ -184,6 +189,11 @@ class GoLangELVisitor extends GoParserBaseVisitor<String> {
 
 
         if(imports.stream().anyMatch((i)-> i.getText().contains("github.com/sjwhitworth/golearn/evaluation"))){
+            EVALPRESENT = true;
+        }
+
+
+        if(imports.stream().anyMatch((i)-> i.getText().contains("github.com/muesli/kmeans"))){
             EVALPRESENT = true;
         }
 
@@ -627,8 +637,6 @@ class GoLangELVisitor extends GoParserBaseVisitor<String> {
 
     @Override
     public String visitTrainModel(GoParser.TrainModelContext ctx) {
-        KNNUSED = true;
-        BASEUSED = true;
 
 
         String rndm = Integer.toString(Math.abs(random.nextInt()));
@@ -642,99 +650,217 @@ class GoLangELVisitor extends GoParserBaseVisitor<String> {
 
         datasetType = datasetType.substring(datasetType.indexOf("[")+1, datasetType.indexOf("]"));
 
-
-        // recupera i parametri
-        String trainParams = visitConfig_train(ctx.config_train());
-
         DatasetRecord datasetInfo = datasetsMap.get(datasetType);
         String[] types = datasetInfo.getHeaderTypes();
+
         String[] names = datasetInfo.getHeader();
 
-        int toPredict = types.length - 1;
 
-        // create columns
-        String addition = "";
-        String finalString = "";
 
-        for (int x = 0; x < types.length; x++) {
-            addition = switch (types[x]){
-                case "int" -> String.format("%s%s := dataframe.NewSeriesInt64(\"%s\", nil)", names[x], rndm, names[x]);
-                case "float64" -> String.format("%s%s := dataframe.NewSeriesFloat64(\"%s\", nil)", names[x], rndm, names[x]);
-                case "string", "bool" -> String.format("%s%s := dataframe.NewSeriesString(\"%s\", nil)", names[x], rndm, names[x]);
-                default -> throw new IllegalStateException("Unexpected value: " + types[x]);
-            };
+        if(ctx.train_classifier() != null) {
+            KNNUSED = true;
+            BASEUSED = true;
 
-            finalString = finalString.concat("\n" + addition);
+            // recupera i parametri
+            String trainParams = visitTrain_classifier(ctx.train_classifier());
+
+
+
+            int toPredict = types.length - 1;
+
+            // create columns
+            String addition = "";
+            String finalString = "";
+
+            for (int x = 0; x < types.length; x++) {
+                addition = switch (types[x]) {
+                    case "int" ->
+                            String.format("%s%s := dataframe.NewSeriesInt64(\"%s\", nil)", names[x], rndm, names[x]);
+                    case "float64" ->
+                            String.format("%s%s := dataframe.NewSeriesFloat64(\"%s\", nil)", names[x], rndm, names[x]);
+                    case "string", "bool" ->
+                            String.format("%s%s := dataframe.NewSeriesString(\"%s\", nil)", names[x], rndm, names[x]);
+                    default -> throw new IllegalStateException("Unexpected value: " + types[x]);
+                };
+
+                finalString = finalString.concat("\n" + addition);
+
+            }
+
+            // create dataset
+            List<String> namesWithRndm = new ArrayList<String>();
+
+
+            for (String name : names) {
+                namesWithRndm.add(name + rndm);
+            }
+
+
+            String columns = String.join(",", namesWithRndm);
+            String dataDecl = String.format("df%s := dataframe.NewDataFrame(%s)", rndm, columns);
+
+
+            // populate dataset
+            String appending = "";
+            for (String s : names) {
+                appending = appending.concat(String.format("\n %s%s.Append(element%s.%s)", s, rndm, rndm, s));
+            }
+
+
+            String populate = String.format("""
+                    for _, element%s := range %s {
+                        %s
+                    
+                    }""", rndm, dataset, appending);
+
+            // convert to instances
+            String conversion = String.format("instances%s := base.ConvertDataFrameToInstances(df%s, %d)", rndm, rndm, toPredict);
+
+            String modelType = "euclidean";
+            Pattern pat = Pattern.compile(".*\\s*type:\\s*\"([a-zA-Z_][a-zA-Z0-9_]*)\".*");
+            Matcher mat = pat.matcher(trainParams);
+            if (mat.find())
+                modelType = mat.group(1);
+
+            mat.reset();
+
+            String distance = "linear";
+            pat = Pattern.compile(".*\\s*distance:\\s*\"([a-zA-Z_][a-zA-Z0-9_]*)\".*");
+            mat = pat.matcher(trainParams);
+            if (mat.find())
+                distance = mat.group(1);
+
+            mat.reset();
+
+            String k = "2";
+            pat = Pattern.compile(".*\\s*k:\\s*\"([0-9]*)\".*");
+            mat = pat.matcher(trainParams);
+            if (mat.find())
+                k = mat.group(1);
+
+            // create classifier
+            String classifier = String.format("cls%s := knn.NewKnnClassifier(\"%s\", \"%s\", %d);", rndm, modelType, distance, Integer.parseInt(k));
+
+            // train
+            String training = String.format("cls%s.Fit(instances%s)\n %s := cls%s", rndm, rndm, var, rndm);
+
+            String firm = "\n// generated from visitTrainModel start--";
+            String closeFirm = "// ----------------------------------\n";
+
+
+            String returnString = String.join("\n", firm, finalString, populate, dataDecl, conversion, classifier, training, closeFirm);
+
+            rewriter.replace(ctx.start, ctx.stop, returnString);
+        }
+
+        if(ctx.train_clustering() != null){
+
+            String trainParams = visitTrain_clustering(ctx.train_clustering());
+            String[] params = {};
+
+            if(trainParams != null)
+                 params = trainParams.split("-");
+
+            Integer x = null;
+            Integer y = null;
+
+            for (int value = 0; value < types.length; value ++) {
+                if(types[value].contains("float") || types[value].contains("int")){
+                    if(y == null && x != null){ y = value; break;}
+                    if(x == null) x = value;
+
+                }
+            }
+
+            int part = 2;
+            String xCoord = names[x];
+            String yCoord = names[y];
+
+            for(String param : params){
+                param = param.replace("\"", "");
+                if(param.contains("partitions"))
+                    part = Integer.parseInt(param.substring(param.indexOf(":")+1));
+                if(param.contains("coordinatex"))
+                    xCoord = param.substring(param.indexOf(":")+1);
+                if(param.contains("coordinatey"))
+                    yCoord = param.substring(param.indexOf(":")+1);
+            }
+            String createCluster = String.format("var d%s clusters.Observations", rndm);
+
+            String takeValuesX = String.format("""
+                    for _, element%s := range %s {
+                        d%s = append(d%s, clusters.Coordinates{
+                            float64(element%s.%s),
+                            float64(element%s.%s),
+                        })
+                    }
+                    """,rndm, dataset, rndm,rndm, rndm, xCoord, rndm, yCoord);
+            String kmeans = String.format("""
+                    km%s := kmeans.New()
+                    %s, _ := km%s.Partition(d%s, %d)""",rndm, var, rndm, rndm, part);
+
+            String firm = "\n// generated from visitTrainModel start--";
+            String closeFirm = "// ----------------------------------\n";
+
+            String returnString = String.join("\n", firm, createCluster, takeValuesX, kmeans, closeFirm);
+
+            rewriter.replace(ctx.start, ctx.stop, returnString);
 
         }
 
-        // create dataset
-        List<String> namesWithRndm = new ArrayList<String>();
 
 
-        for (String name : names) {
-            namesWithRndm.add(name+rndm);
-        }
 
-
-        String columns = String.join(",", namesWithRndm);
-        String dataDecl = String.format("df%s := dataframe.NewDataFrame(%s)", rndm, columns);
-
-
-        // populate dataset
-        String appending = "";
-        for(String s : names){
-            appending = appending.concat(String.format("\n %s%s.Append(element%s.%s)",s, rndm,rndm, s ));
-        }
-
-
-        String populate = String.format("""
-                for _, element%s := range %s {
-                    %s
-                
-                }""", rndm, dataset, appending);
-
-        // convert to instances
-        String conversion = String.format( "instances%s := base.ConvertDataFrameToInstances(df%s, %d)", rndm, rndm, toPredict);
-
-        String modelType = "euclidean";
-        Pattern pat = Pattern.compile(".*\\s*type:\\s*\"([a-zA-Z_][a-zA-Z0-9_]*)\".*");
-        Matcher mat = pat.matcher(trainParams);
-        if(mat.find())
-            modelType = mat.group(1);
-
-        mat.reset();
-
-        String distance = "linear";
-        pat = Pattern.compile(".*\\s*distance:\\s*\"([a-zA-Z_][a-zA-Z0-9_]*)\".*");
-        mat = pat.matcher(trainParams);
-        if(mat.find())
-            distance = mat.group(1);
-
-        mat.reset();
-
-        String k = "2";
-        pat = Pattern.compile(".*\\s*k:\\s*\"([0-9]*)\".*");
-        mat = pat.matcher(trainParams);
-        if(mat.find())
-            k = mat.group(1);
-
-        // create classifier
-        String classifier = String.format("cls%s := knn.NewKnnClassifier(\"%s\", \"%s\", %d);", rndm, modelType, distance, Integer.parseInt(k));
-
-        // train
-        String training = String.format("cls%s.Fit(instances%s)\n %s := cls%s", rndm, rndm, var, rndm);
-
-        String firm = "\n// generated from visitTrainModel start--";
-        String closeFirm = "// ----------------------------------\n";
-
-
-        String returnString = String.join("\n",firm, finalString,  populate, dataDecl, conversion, classifier, training, closeFirm);
-
-        rewriter.replace(ctx.start, ctx.stop, returnString  );
         return super.visitTrainModel(ctx);
     }
 
+    @Override
+    public String visitTrain_classifier(GoParser.Train_classifierContext ctx) {
+        return visitConfig_classifier(ctx.config_classifier());
+    }
+
+    @Override
+    public String visitConfig_classifier(GoParser.Config_classifierContext ctx) {
+        // recupera ricorsivamente tutti le coppie parametro valore
+        if (ctx != null) {
+            String param = ctx.CLASSIFIER_PARAMS().getText();
+            String value = ctx.string_().getText();
+            param = param.concat(":" + value);
+            String other = null;
+
+            if (ctx.config_classifier()!= null)
+                other = visitConfig_classifier(ctx.config_classifier());
+
+            if (other != null)
+                param = param.concat(" - " + other);
+
+            return param;
+        }else return "";
+    }
+
+    @Override
+    public String visitTrain_clustering(GoParser.Train_clusteringContext ctx) {
+        return visitConfig_cluster(ctx.config_cluster());
+    }
+
+    @Override
+    public String visitConfig_cluster(GoParser.Config_clusterContext ctx) {
+        if (ctx != null) {
+            String param = ctx.CLUSTERING_PARAMS().getText();
+            String value = ctx.string_().getText();
+            param = param.concat(":" + value);
+            String other = null;
+
+            if (ctx.config_cluster()!= null)
+                other = visitConfig_cluster(ctx.config_cluster());
+
+            if (other != null)
+                param = param.concat(" - " + other);
+
+            return param;
+        }else return "";
+
+    }
 
     @Override
     public String visitVarDecl(GoParser.VarDeclContext ctx) {
@@ -902,25 +1028,6 @@ class GoLangELVisitor extends GoParserBaseVisitor<String> {
         return super.visitTestModel(ctx);
     }
 
-    @Override
-    public String visitConfig_train(GoParser.Config_trainContext ctx) {
-
-        // recupera ricorsivamente tutti le coppie parametro valore
-        if (ctx != null) {
-            String param = ctx.TRAIN_PARAMS().getText();
-            String value = ctx.string_().getText();
-            param = param.concat(":" + value);
-            String other = null;
-
-            if (ctx.config_train() != null)
-                other = visitConfig_train(ctx.config_train());
-
-            if (other != null)
-                param = param.concat(" - " + other);
-
-            return param;
-        }else return "";
-    }
 
     @Override
     public String visitEvaluation(GoParser.EvaluationContext ctx) {
@@ -980,7 +1087,6 @@ class GoLangELVisitor extends GoParserBaseVisitor<String> {
         rewriter.replace(ctx.start, ctx.stop, returnString);
         return super.visitEvaluation(ctx);
     }
-
 
 
     @Override
@@ -1159,4 +1265,6 @@ class GoLangELVisitor extends GoParserBaseVisitor<String> {
 
         return super.visitFilter_get(ctx);
     }
+
+
 }
