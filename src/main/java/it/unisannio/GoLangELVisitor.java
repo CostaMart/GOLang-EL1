@@ -309,6 +309,21 @@ class GoLangELVisitor extends GoParserBaseVisitor<String> {
     }
 
     @Override
+    public String visitFunctionDecl(GoParser.FunctionDeclContext ctx) {
+        // push new scope in stack when 'if' starts
+        scopes.push(ctx.IDENTIFIER.getText());
+        logger.debug(scopes);
+        // visi deeper
+        super.visitFunctionDecl(ctx);
+
+
+        // pop out of 'if' scope when IF structure ends
+        scopes.pop();
+        return "";
+
+    }
+
+    @Override
     public String visitMapCSV(GoParser.MapCSVContext ctx) {
         // TODO: implement this
 
@@ -965,6 +980,8 @@ class GoLangELVisitor extends GoParserBaseVisitor<String> {
         rewriter.replace(ctx.start, ctx.stop, returnString);
         return super.visitEvaluation(ctx);
     }
+
+
 
     @Override
     public String visitConfig_test(GoParser.Config_testContext ctx) {

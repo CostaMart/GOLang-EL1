@@ -126,8 +126,8 @@ typeTerm
 // Function declarations
 
 functionDecl
-    : FUNC IDENTIFIER typeParameters? signature block? {String sign = $signature.params_return; sym.put($IDENTIFIER.text, scopes); sym.assing($IDENTIFIER.text, scopes, createfunctionRecord($signature.params_return));
-                                                            sym.setType($IDENTIFIER.text, scopes, "func");}
+    : FUNC IDENTIFIER typeParameters? signature {scopes.add($IDENTIFIER.text ); String sign = $signature.params_return; sym.put("func-"+ $IDENTIFIER.text , scopes); sym.assing($IDENTIFIER.text, scopes, createfunctionRecord($signature.params_return)); sym.setType($IDENTIFIER.text, scopes, "func");} block? {
+                                                             scopes.pop();}
     ;
 
 methodDecl
@@ -210,7 +210,7 @@ assign_op
     : (PLUS | MINUS | OR | CARET | STAR | DIV | MOD | LSHIFT | RSHIFT | AMPERSAND | BIT_CLEAR)? ASSIGN
     ;
 
-shortVarDecl // TODO: qui bisognerebbe trovare il modo di assegnare il tipo alla variabile, il problema è che a destra puoi averea una qulasiasi cosa.
+shortVarDecl
     : val = identifierList DECLARE_ASSIGN val2 = expressionList {sym.put($val.text, scopes); sym.assing($val.text, scopes, $val2.text);}
     ;
 

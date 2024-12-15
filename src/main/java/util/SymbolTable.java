@@ -32,12 +32,15 @@ public class SymbolTable {
             if (working.empty())  break;
 
         }
-            // check if the value is already defined in the target scope
-            if (lex.contains("for-") | lex.contains("if-")){
+        Record r = new Record(1);
+        // check if the value is already defined in the target scope
+            if (lex.contains("for-") | lex.contains("if-") | lex.contains("func-")){
+                lex = lex.replace("func-", "");
                 if(t.get(lex) != null)  throw new RuntimeException("Duplicate lexical symbol in same scope: " + lex);
+                r = new Record(1, new HashMap<String, Record>());
             }
 
-            Record r = lex.contains("for-") | lex.contains("if-") ? new Record(1, new HashMap<String, Record>()) : new Record(1);
+
             t.put(lex, r);
     }
 
@@ -118,6 +121,7 @@ public class SymbolTable {
         while(!(working.empty())){
             String s = working.pop();
             t = t.get(s).table;
+            if(s.equals(lex)) break;
             if(t.get(lex) != null) toReturn = t.get(lex);
         }
 
