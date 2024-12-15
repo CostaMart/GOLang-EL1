@@ -156,7 +156,7 @@ statementList
 
 statement
     : declaration
-    | filterCSV
+    | filter_get
     | labeledStmt
     | simpleStmt
     | goStmt
@@ -179,6 +179,7 @@ statement
     | trainModel
     | testModel
     | evaluation
+    | get_column
     ;
 
 simpleStmt
@@ -564,8 +565,11 @@ operator
  :  ( EQUALS | NOT_EQUALS | LESS | LESS_OR_EQUALS | GREATER | GREATER_OR_EQUALS)
  ;
 
+filter_get
+    : IDENTIFIER  PRINTER (filterCSV | get_column)
+    ;
 filterCSV
-    : IDENTIFIER  (L_BRACKET expression operator expression R_BRACKET ) (IN IDENTIFIER)?
+    : (expression operator expression) (IN IDENTIFIER)?
     ;
 
 mapCSV
@@ -581,7 +585,7 @@ splitCSV
     ;
 
 trainModel
-    : TRAIN var = IDENTIFIER RECEIVE dataset = IDENTIFIER (OR config_train)? {trainModelSemanticCheck(scopes, $var.text, $dataset.text);}
+    : (CLASSIFIER | CLUSTERIZER)  var = IDENTIFIER RECEIVE dataset = IDENTIFIER (OR config_train)? {trainModelSemanticCheck(scopes, $var.text, $dataset.text);}
     ;
 
 config_train
@@ -600,4 +604,8 @@ evaluation
 config_test
     :  TEST_PARAMS
     |  config_test OR TEST_PARAMS
+    ;
+
+get_column
+    : DECIMAL_LIT? COLON DECIMAL_LIT? IN IDENTIFIER
     ;

@@ -289,47 +289,7 @@ class GoLangELVisitor extends GoParserBaseVisitor<String> {
 
     @Override
     public String visitFilterCSV(GoParser.FilterCSVContext ctx) {
-        String code = Integer.toString(Math.abs(random.nextInt()));
 
-        // get what you need to generate code
-       String variable = ctx.IDENTIFIER(0).getText();
-       String type = symbolTable.getRecord(variable, scopes).getType();
-        logger.debug("thi is type: "  + type + " searching in scope " + scopes);
-       String firstOpExpression = ctx.expression(0).getText();
-
-       String opreator = ctx.operator().getText();
-       String secondOpExpression = ctx.expression(1).getText();
-
-       // Check if there are references to members of the struct in the expression
-        Map<String, DatasetRecord> datasets = (Map<String, DatasetRecord>) symbolTable.getRecord("datasets").getValue();
-        type = type.replace("[", "").replace("]", "");
-        DatasetRecord record = datasets.get(type);
-        String[] header = record.getHeader();
-
-        // if tehre are reference to the members of the sctruct in the expression of the filter put the name of the variable in front of them to access them correctly
-        // e.g. with a Pesron type dataset: x[Age > 20] -> if variable.Age > 20
-        for(String s : header){
-            firstOpExpression = firstOpExpression.replace(s, "variable" + code + "." + s);
-        }
-
-       logger.debug("for " + firstOpExpression + " in " + scopes);
-       logger.debug("the type is " + type);
-
-        // generate go
-        String firm = "\n// generated from visitFilterCSV start--";
-       String declareVar = String.format("var filtered%s []%s", code, type);
-       String forDeclar = String.format("for _, variable%s := range %s {", code, variable);
-       String forBlock = String.format("if %s %s %s {",firstOpExpression, opreator,secondOpExpression);
-       String insideInternalIf = String.format("filtered%s = append(filtered%s, variable%s)",code, code,code);
-       String closeBRKT ="\t}\n" +
-               "\t}";
-       String assignToVar = String.format("%s = filtered%s", variable, code);
-        String closeFirm = "//----------------------------------\n";
-
-       String toAdd = String.join("\n", firm, declareVar,forDeclar,forBlock,insideInternalIf,closeBRKT,assignToVar, closeFirm);
-
-       logger.debug("to Add:" + toAdd);
-       rewriter.replace(ctx.start, ctx.stop, toAdd);
         return super.visitFilterCSV(ctx);
     }
 
@@ -1021,5 +981,165 @@ class GoLangELVisitor extends GoParserBaseVisitor<String> {
 
             return param;
         }else return "";
+    }
+
+    @Override
+    public String visitGet_column(GoParser.Get_columnContext ctx) {
+        return "";
+    }
+
+    @Override
+    public String visitFilter_get(GoParser.Filter_getContext ctx) {
+        String rndm = Integer.toString(Math.abs(random.nextInt()));
+        String filter = "";
+        String var = ctx.IDENTIFIER().getText();
+
+
+        if(ctx.get_column() != null) {
+
+
+
+            String target = ctx.get_column().IDENTIFIER().getText();
+
+
+            String row = "-";
+            String column = "_";
+            String text = ctx.get_column().getText();
+            text = text.substring(0, text.indexOf("i"));
+            Pattern p = Pattern.compile("(\\d+:\\d+)");
+            Matcher m = p.matcher(text);
+
+            if(m.find()){
+
+                if(ctx.get_column().DECIMAL_LIT(0) != null)
+                    row = ctx.get_column().DECIMAL_LIT(0).getText();
+
+                if(ctx.get_column().DECIMAL_LIT(1) != null)
+                    column = ctx.get_column().DECIMAL_LIT(1).getText();
+
+            }
+
+            Pattern p2 = Pattern.compile("(^\\d+:$)");
+            Matcher m2 = p2.matcher(text);
+
+            if(m2.find()){
+                if(ctx.get_column().DECIMAL_LIT(0) != null)
+                    row = ctx.get_column().DECIMAL_LIT(0).getText();
+            }
+
+
+            Pattern p3 = Pattern.compile("^:\\d+$");
+            Matcher m3 = p3.matcher(text);
+
+            if(m3.find()){
+                if(ctx.get_column().DECIMAL_LIT(0) != null)
+                    column = ctx.get_column().DECIMAL_LIT(0).getText();
+            }
+
+
+
+            SymbolTable.Record r = symbolTable.getRecord("datasets", new Stack<>());
+            HashMap<String, DatasetRecord> value = (HashMap<String, DatasetRecord>) r.getValue();
+            String varT = symbolTable.getRecord(var, scopes).getType();
+            varT = varT.substring(varT.indexOf("[") +1, varT.indexOf("]"));
+            String[] headers = value.get(varT).getHeader();
+            String[] types = value.get(varT).getHeaderTypes();
+            String col = "";
+
+            if(!row.equals("-")){
+                boolean colrequest = false;
+                String getRow = String.format("row%s := %s[%s]", rndm, var, row);
+
+                if(!column.equals("_")){
+
+                    int colIndex = Integer.parseInt(column);
+                    col = headers[colIndex];
+
+                    getRow = getRow.concat(String.format("\ncol%s := row%s.%s", rndm, rndm, col));
+                    colrequest = true;
+                }
+
+                String finalString = getRow.concat(String.format("\n%s := row%s", target, rndm));
+                if(colrequest)
+                    finalString = getRow.concat(String.format("\n%s := col%s", target, rndm));
+
+                rewriter.replace(ctx.start, ctx.stop, finalString);
+                return "";
+            }
+
+
+            if(!column.equals("_")){
+
+                int colIndex = Integer.parseInt(column);
+                col = types[colIndex];
+
+                String makeList = String.format("%s := make([]%s, len(%s))\n", target, col, var);
+
+                col = headers[colIndex];
+
+
+                String makeFor = String.format("""
+                    for i := 0; i < len(%s); i++ {
+                     %s[i] = %s[i].%s
+                     }""", var, target, var, col);
+
+                String finalString = makeList.concat(makeFor);
+
+               rewriter.replace(ctx.start, ctx.stop, finalString);
+            }
+
+
+        }
+
+
+
+        else{
+            String code = Integer.toString(Math.abs(random.nextInt()));
+
+            // get what you need to generate code
+            String variable = var;
+            String type = symbolTable.getRecord(variable, scopes).getType();
+            logger.debug("thi is type: "  + type + " searching in scope " + scopes);
+            String firstOpExpression = ctx.filterCSV().expression(0).getText();
+
+            String opreator = ctx.filterCSV().operator().getText();
+            String secondOpExpression = ctx.filterCSV().expression(1).getText();
+
+            // Check if there are references to members of the struct in the expression
+            Map<String, DatasetRecord> datasets = (Map<String, DatasetRecord>) symbolTable.getRecord("datasets").getValue();
+            type = type.replace("Dataset[", "").replace("]", "");
+            DatasetRecord record = datasets.get(type);
+            String[] header = record.getHeader();
+
+            // if tehre are reference to the members of the sctruct in the expression of the filter put the name of the variable in front of them to access them correctly
+            // e.g. with a Pesron type dataset: x[Age > 20] -> if variable.Age > 20
+            for(String s : header){
+                firstOpExpression = firstOpExpression.replace(s, "variable" + code + "." + s);
+            }
+
+            logger.debug("for " + firstOpExpression + " in " + scopes);
+            logger.debug("the type is " + type);
+
+            String target = ctx.filterCSV().IDENTIFIER().getText();
+
+            // generate go
+            String firm = "\n// generated from visitFilterCSV start--";
+            String declareVar = String.format("var filtered%s []%s", code, type);
+            String forDeclar = String.format("for _, variable%s := range %s {", code, variable);
+            String forBlock = String.format("if %s %s %s {",firstOpExpression, opreator,secondOpExpression);
+            String insideInternalIf = String.format("filtered%s = append(filtered%s, variable%s)",code, code,code);
+            String closeBRKT ="\t}\n" +
+                    "\t}";
+            String assignToVar = String.format("%s := filtered%s", target, code);
+            String closeFirm = "//----------------------------------\n";
+
+            String toAdd = String.join("\n", firm, declareVar,forDeclar,forBlock,insideInternalIf,closeBRKT,assignToVar, closeFirm);
+
+            logger.debug("to Add:" + toAdd);
+            rewriter.replace(ctx.start, ctx.stop, toAdd);
+        }
+
+
+        return super.visitFilter_get(ctx);
     }
 }

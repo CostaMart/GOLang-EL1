@@ -51,7 +51,8 @@ REDUCE         : 'reduce';
 IN             : 'in';
 MEAN           : 'mean';
 SPLIT          : 'split';
-TRAIN          : 'train-model';
+CLASSIFIER     : 'classify';
+CLUSTERIZER    : 'clusterize';
 EVAL           : 'evaluate-model';
 
 // token relativi ai parametri della regola train

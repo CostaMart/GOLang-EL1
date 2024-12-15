@@ -372,6 +372,11 @@ public abstract class GoParserBase extends Parser
 
     }
 
+    protected boolean isDataset(String var, Stack<String> scopes){
+            String type = sym.getRecord(var, scopes).getType();
+            return type.contains("Dataset[");
+    }
+
     /**
      * A helper class used to store a method and its associated arguments for deferred execution.
      * This class is used in conjunction with the stack of deferred checks to hold the method and
