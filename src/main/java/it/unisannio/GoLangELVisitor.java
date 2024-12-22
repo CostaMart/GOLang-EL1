@@ -555,7 +555,7 @@ class GoLangELVisitor extends GoParserBaseVisitor<String> {
         String validate = null;
         String train;
         String test;
-        SymbolTable.Record variableType = symbolTable.getRecord(var);
+        SymbolTable.Record variableType = symbolTable.getRecord(var, scopes);
 
 
 
@@ -1051,7 +1051,7 @@ class GoLangELVisitor extends GoParserBaseVisitor<String> {
         String finalString = "";
 
 
-        String confusion = String.format("c%s, _ := evaluation.GetConfusionMatrix(%s, %s)", rndm, dataset, predictedOn.get(dataset));
+        String confusion = String.format("c%s, _ := evaluation.GetConfusionMatrix(%s, %s)", rndm, dataset, predictedOn.get(var));
 
         String evaluation = null;
         String evaluationPart = "";

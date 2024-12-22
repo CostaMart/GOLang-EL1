@@ -6,12 +6,20 @@ import (
 )
 
 func main() {
-
+    mario := mario()
     load "test.csv" Person in y
 
+    var tr Dataset[Person]
+    var tst Dataset[Person]
+    split y 0.7 : 0.3 in tr,tst
 
-    y ->> Age%2 == 0 in x
+    train model <- tr classifier
 
-    train model <- x cluster | partitions:"5"
-    fmt.Print(model)
+    prediction model <- tst in results
+
+
+    fmt.Print(results)
+
+
+
 }

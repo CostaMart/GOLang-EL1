@@ -45,8 +45,9 @@ options{
 }
 
 // Golang EL1 keywords
-LOAD        :'load';
-ELAPPLY        : '<<-';
+PREDICTION     : 'prediction';
+LOAD           :'load';
+MAPPING        : 'mapping';
 REDUCE         : 'reduce';
 IN             : 'in';
 MEAN           : 'mean';
@@ -54,17 +55,17 @@ SPLIT          : 'split';
 TRAIN          : 'train';
 CLASSIFIER     : 'classifier';
 CLUSTER        : 'cluster';
-EVAL           : 'evaluate-model';
+EVAL           : 'evaluate';
 
 // token relativi ai parametri della regola train
-CLASSIFIER_PARAMS   : 'type' | 'distance' | 'weigth' | 'k';
+CLASSIFIER_PARAMS   : 'classifier-type' | 'distance' | 'weigth' | 'k';
 CLUSTERING_PARAMS   : 'coordinatex' | 'coordinatey' | 'partitions' ;
 // token relativi ai parametri della regola test
 TEST_PARAMS   : 'PRECISION' | 'RECALL' | 'F1' | 'CONFUSION';
 
 //---------------------------------------------------
 
-TEST           : 'test-model';
+
 
 // Keywords
 

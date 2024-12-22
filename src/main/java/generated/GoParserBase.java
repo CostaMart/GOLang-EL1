@@ -1,6 +1,7 @@
 package generated;
 
 import org.antlr.v4.runtime.*;
+import util.GoUtilities;
 import util.SymbolTable;
 import util.SymbolTableFactory;
 import util.FunctionRecord;
@@ -418,4 +419,6 @@ public abstract class GoParserBase extends Parser
             sym.setType(var2, sc, sym.getRecord(var,sc ).getType());
         }
     }
+
+
 }

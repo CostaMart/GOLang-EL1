@@ -47,4 +47,18 @@ public class GoUtilities {
             }
         }
     }
+    public static String inferTypeFromExpression(String expression) {
+        if (expression.matches("-?\\d+")) {
+            return "int";
+        } else if (expression.matches("-?\\d+\\.\\d+")) {
+            return "float";
+        } else if (expression.matches("\".*\"")) {
+            return "string";
+        } else if (expression.matches("[a-zA-Z_][a-zA-Z0-9_]*")) {
+            return "identifier"; // Può essere una variabile già dichiarata.
+        } else if (expression.matches("[a-zA-Z_][a-zA-Z0-9_]*\\(\\)")){
+            return "funcCall"; // Per espressioni più complesse.
+        } else return "string";
+    }
+
 }

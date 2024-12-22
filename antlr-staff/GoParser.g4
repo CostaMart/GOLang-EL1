@@ -556,6 +556,10 @@ eos
  // golang EL1 rules
 
 
+testModel
+    : PREDICTION model = IDENTIFIER RECEIVE dataset = IDENTIFIER IN data = IDENTIFIER  {testModelSemanticCheck($data.text, scopes, $model.text, $dataset.text);}
+    ;
+
 
 loadCSV
     : LOAD string_ IDENTIFIER IN var = IDENTIFIER  {loadCsvSemanticCheck($IDENTIFIER(1).getText(), scopes); sym.put($IDENTIFIER(1).getText(), scopes); sym.setType($IDENTIFIER(1).getText(), scopes, "Dataset[" + $IDENTIFIER(0).getText() + "]"); }
@@ -578,7 +582,7 @@ get_column
     ;
 
 mapCSV
-    : var = IDENTIFIER ELAPPLY ( functID = IDENTIFIER | funct = functionLit) (IN target = IDENTIFIER)? {String vart = $var.text; String functIDt = $functID.text; String functt = $funct.text; String targett = $target.text; System.out.println(vart); mapCSVSematicCheck(scopes, vart, functIDt, functt, targett);}
+    : var = IDENTIFIER MAPPING ( functID = IDENTIFIER | funct = functionLit) (IN target = IDENTIFIER)? {String vart = $var.text; String functIDt = $functID.text; String functt = $funct.text; String targett = $target.text; System.out.println(vart); mapCSVSematicCheck(scopes, vart, functIDt, functt, targett);}
     ;
 
 reduceCSV
@@ -609,10 +613,6 @@ train_clustering
 config_cluster
     :  CLUSTERING_PARAMS COLON string_
     | config_cluster OR CLUSTERING_PARAMS COLON string_
-    ;
-
-testModel
-    : TEST model = IDENTIFIER RECEIVE dataset = IDENTIFIER IN data = IDENTIFIER  {testModelSemanticCheck($data.text, scopes, $model.text, $dataset.text);}
     ;
 
 evaluation
